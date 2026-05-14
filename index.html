@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>LeGab - Scanner</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="app-container">
+        <header class="app-header">
+            <h1 class="logo">LeGab</h1>
+            <nav class="app-nav">
+                <a href="index.html" class="nav-link active">Scanner</a>
+                <a href="generate.html" class="nav-link">Gerar Gabarito</a>
+                <a href="config.html" class="nav-link">Configurações</a>
+            </nav>
+        </header>
+
+        <main class="app-main">
+            <div class="section">
+                <h2>Escanear Gabarito</h2>
+                <div id="video-container" class="video-container">
+                    <video id="video" autoplay playsinline></video>
+                    <canvas id="canvas"></canvas>
+                    <div id="overlay" class="scan-overlay">
+                        <div class="scan-frame"></div>
+                        <p>Alinhe o gabarito dentro do quadro</p>
+                    </div>
+                </div>
+                <div class="scanner-buttons">
+                    <button id="btn-start" class="btn btn-primary">Iniciar Câmera</button>
+                    <button id="btn-capture" class="btn btn-secondary hidden">Capturar Imagem</button>
+                    <button id="btn-stop" class="btn btn-secondary hidden">Parar</button>
+                </div>
+            </div>
+
+            <div class="section hidden" id="manual-section">
+                <h3>Ou digite as respostas</h3>
+                <div class="input-group">
+                    <label for="manual-answers">Respostas (ex: ABCDED...)</label>
+                    <input type="text" id="manual-answers" placeholder="Digite as respostas..." maxlength="100">
+                    <button id="btn-check-manual" class="btn btn-primary">Verificar</button>
+                </div>
+            </div>
+
+            <div id="result-section" class="section hidden">
+                <div class="result-card">
+                    <h3>Resultado</h3>
+                    <div class="result-stats">
+                        <div class="stat correct">
+                            <span class="stat-value" id="correct-count">0</span>
+                            <span class="stat-label">Acertos</span>
+                        </div>
+                        <div class="stat wrong">
+                            <span class="stat-value" id="wrong-count">0</span>
+                            <span class="stat-label">Erros</span>
+                        </div>
+                        <div class="stat total">
+                            <span class="stat-value" id="total-questions">0</span>
+                            <span class="stat-label">Total</span>
+                        </div>
+                    </div>
+                    <div class="result-score">
+                        <span class="score-value" id="score-percent">0%</span>
+                    </div>
+                    <div id="pass-fail" class="pass-fail"></div>
+                </div>
+            </div>
+
+            <div id="loading-section" class="section hidden">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Processando imagem...</p>
+                    <p id="loading-status">Iniciando OCR...</p>
+                </div>
+            </div>
+
+            <div class="section">
+                <p class="info-text">
+                    Questões: <strong id="config-questions">-</strong> |
+                    Alternativas: <strong id="config-alternatives">-</strong>
+                </p>
+            </div>
+        </main>
+    </div>
+
+    <div id="toast" class="toast hidden"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
+    <script src="js/config.js"></script>
+    <script src="js/scanner.js"></script>
+</body>
+</html>

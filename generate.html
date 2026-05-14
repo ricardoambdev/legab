@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>LeGab - Gerar Gabarito</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/gabarito.css">
+</head>
+<body>
+    <div class="app-container">
+        <header class="app-header">
+            <h1 class="logo">LeGab</h1>
+            <nav class="app-nav">
+                <a href="index.html" class="nav-link">Scanner</a>
+                <a href="generate.html" class="nav-link active">Gerar Gabarito</a>
+                <a href="config.html" class="nav-link">Configurações</a>
+            </nav>
+        </header>
+
+        <main class="app-main">
+            <div class="section">
+                <h2>Gerar Gabarito</h2>
+
+                <div class="form-group">
+                    <label for="gen-questions">Número de Questões</label>
+                    <input type="number" id="gen-questions" min="1" max="200" value="20">
+                </div>
+
+                <div class="form-group">
+                    <label for="gen-alternatives">Alternativas por Questão</label>
+                    <select id="gen-alternatives">
+                        <option value="3">3 (A, B, C)</option>
+                        <option value="4">4 (A, B, C, D)</option>
+                        <option value="5" selected>5 (A, B, C, D, E)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="gen-answers">Gabarito Correto (opcional)</label>
+                    <input type="text" id="gen-answers" placeholder="Deixe vazio para gabarito em branco" maxlength="200">
+                    <small style="color: #666; font-size: 12px;">Se vazio, gera gabarito em branco para impressão</small>
+                </div>
+
+                <button id="btn-generate" class="btn btn-primary">Gerar Gabarito</button>
+            </div>
+
+            <div id="gabarito-preview" class="section hidden">
+                <h3>Preview do Gabarito</h3>
+                <div class="preview-controls">
+                    <button id="btn-copy-key" class="btn btn-secondary">Copiar Chave</button>
+                    <button id="btn-show-key" class="btn btn-secondary">Mostrar Chave</button>
+                    <button id="btn-print" class="btn btn-primary">Imprimir</button>
+                </div>
+                <div id="gabarito-pages" class="gabarito-pages"></div>
+            </div>
+
+            <div class="section">
+                <h3>QR Code com Chave</h3>
+                <div id="qrcode-container" class="qrcode-container">
+                    <p style="color: #666; text-align: center;">Gere um gabarito com respostas para gerar o QR Code</p>
+                </div>
+                <p class="qr-instructions">
+                    Escaneie este QR Code com o aplicativo para carregar o gabarito automaticamente.
+                </p>
+            </div>
+        </main>
+    </div>
+
+    <div id="toast" class="toast hidden"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+    <script src="js/config.js"></script>
+    <script src="js/generator.js"></script>
+</body>
+</html>
