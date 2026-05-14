@@ -2,46 +2,81 @@ class GabaritoOCR {
     constructor() {
         this.worker = null;
         this.ready = false;
+        this.initializing = false;
     }
 
     async init() {
-        if (this.ready) return;
+        if (this.ready) return true;
+        if (this.initializing) {
+            while (this.initializing) {
+                await new Promise(r => setTimeout(r, 100));
+            }
+            return this.ready;
+        }
+
+        this.initializing = true;
 
         try {
-            this.worker = await Tesseract.createWorker('por');
+            console.log('Iniciando Tesseract Worker...');
+
+            const result = await Tesseract.createWorker('por', 1, {
+                logger: m => {
+                    if (m.status === 'recognizing text') {
+                        updateLoadingStatus(`OCR: ${Math.round(m.progress * 100)}%`);
+                    }
+                }
+            });
+
+            this.worker = result;
             this.ready = true;
+            this.initializing = false;
+            console.log('Tesseract Worker pronto');
+            return true;
         } catch (error) {
-            console.error('Erro ao inicializar Tesseract:', error);
+            console.error('Erro ao criar worker Tesseract:', error);
+            this.initializing = false;
             throw new Error('Falha ao inicializar OCR. Verifique sua conexão com a internet.');
         }
     }
 
     async processImage(imageSource) {
-        await this.init();
+        if (!this.ready || !this.worker) {
+            throw new Error('OCR não está pronto');
+        }
 
         try {
+            console.log('Iniciando reconhecimento...');
+
             const result = await this.worker.recognize(imageSource);
+
+            console.log('Resultado OCR:', result.data.text.substring(0, 100));
+
             return result.data.text;
         } catch (error) {
             console.error('Erro no reconhecimento:', error);
-            throw new Error('Falha ao processar imagem.');
+            throw new Error('Falha ao processar imagem com OCR.');
         }
     }
 
     parseGabarito(text, numQuestions, numAlternatives) {
-        if (!text || typeof text !== 'string') {
+        if (!text || typeof text !== 'string' || text.trim() === '') {
+            console.log('Texto OCR vazio ou inválido');
             return '';
         }
 
         const lines = text.split('\n').filter(line => line.trim());
+
         if (lines.length === 0) {
+            console.log('Nenhuma linha válida encontrada');
             return '';
         }
+
+        console.log(`Encontradas ${lines.length} linhas`);
 
         const answers = new Array(numQuestions).fill(null);
         const options = 'ABCDE'.substring(0, numAlternatives);
 
-        console.log('Texto OCR detectado:', text.substring(0, 200));
+        console.log('Procurando respostas...');
 
         for (const line of lines) {
             const cleanLine = line.toUpperCase().replace(/[^A-E0-9\s]/g, ' ').trim();
@@ -71,6 +106,7 @@ class GabaritoOCR {
                             const candidate = parts[j].replace(/[^\w]/g, '').toUpperCase();
                             if (options.includes(candidate) && candidate.length === 1) {
                                 answers[questionNum - 1] = candidate;
+                                i = j;
                                 break;
                             }
                         }
@@ -81,6 +117,10 @@ class GabaritoOCR {
 
         const detectedCount = answers.filter(a => a !== null).length;
         console.log(`Detectadas ${detectedCount} de ${numQuestions} respostas`);
+
+        if (detectedCount === 0) {
+            console.log('Texto completo OCR:', text);
+        }
 
         return answers.map(a => a || '').join('');
     }
@@ -96,18 +136,31 @@ class Scanner {
 
     async start(onError) {
         try {
+            console.log('Solicitando acesso à câmera...');
+
             this.stream = await navigator.mediaDevices.getUserMedia({
                 video: {
                     facingMode: 'environment',
-                    width: { ideal: 1280 },
-                    height: { ideal: 720 }
-                }
+                    width: { ideal: 1280, min: 640 },
+                    height: { ideal: 720, min: 480 }
+                },
+                audio: false
             });
+
+            console.log('Câmera acessada com sucesso');
 
             this.video = document.getElementById('video');
             this.canvas = document.getElementById('canvas');
+
             this.video.srcObject = this.stream;
+
+            await new Promise(resolve => {
+                this.video.onloadedmetadata = resolve;
+            });
+
             await this.video.play();
+
+            console.log(`Vídeo iniciado: ${this.video.videoWidth}x${this.video.videoHeight}`);
 
             document.getElementById('btn-start').classList.add('hidden');
             document.getElementById('btn-capture').classList.remove('hidden');
@@ -132,6 +185,8 @@ class Scanner {
         const width = this.video.videoWidth;
         const height = this.video.videoHeight;
 
+        console.log(`Capturando imagem: ${width}x${height}`);
+
         if (width === 0 || height === 0) {
             throw new Error('Não foi possível capturar a imagem. Tente novamente.');
         }
@@ -140,11 +195,15 @@ class Scanner {
         this.canvas.height = height;
         ctx.drawImage(this.video, 0, 0);
 
-        const imageData = this.canvas.toDataURL('image/png');
+        const imageData = this.canvas.toDataURL('image/jpeg', 0.8);
+        console.log('Imagem capturada, tamanho:', imageData.length);
 
         const ocr = new GabaritoOCR();
 
         updateLoadingStatus('Iniciando OCR...');
+        await ocr.init();
+
+        updateLoadingStatus('Reconhecendo texto...');
         const text = await ocr.processImage(imageData);
 
         updateLoadingStatus('Analisando respostas...');
@@ -224,10 +283,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     gradeChecker = new GradeChecker();
     configManager = new ConfigManager();
 
-    configManager.onReady(() => {
-        console.log('ConfigManager pronto');
-    });
-
+    console.log('Verificando configuração...');
     const config = await configManager.getConfig();
     if (config) {
         document.getElementById('config-questions').textContent = config.numQuestions || '60';
@@ -256,6 +312,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     btnCapture.addEventListener('click', async () => {
         try {
             const cfg = await configManager.getConfig();
+            console.log('Config carregada:', cfg);
 
             if (!cfg) {
                 showToast('Configuração não encontrada. Configure o gabarito primeiro.', true);
@@ -268,19 +325,20 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             showLoading(true);
-            updateLoadingStatus('Capturando imagem...');
+            updateLoadingStatus('Preparando captura...');
 
             const detectedAnswers = await scanner.captureAndProcess(cfg);
+            console.log('Respostas detectadas:', detectedAnswers);
 
             showToast(`Detectado: ${detectedAnswers || 'nenhuma resposta'}`);
 
             if (!detectedAnswers || detectedAnswers.length === 0) {
-                showToast('Não foi possível detectar as respostas. Tente novamente.', true);
+                showToast('Não foi possível detectar as respostas. Tente melhor a iluminação.', true);
                 showLoading(false);
                 return;
             }
 
-            updateLoadingStatus('Verificando...');
+            updateLoadingStatus('Calculando resultado...');
             const result = gradeChecker.checkAnswers(detectedAnswers, cfg);
             displayResults(result);
             showLoading(false);
