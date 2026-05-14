@@ -46,44 +46,89 @@ class GabaritoGenerator {
 
     createGabaritoHTML(numQuestions, numAlternatives, answers = null) {
         const opts = this.options.substring(0, numAlternatives);
-        const questionsPerPage = 10;
+        const questionsPerPage = 30;
         const totalPages = Math.ceil(numQuestions / questionsPerPage);
         let pagesHTML = '';
 
         for (let page = 0; page < totalPages; page++) {
             const startQ = page * questionsPerPage + 1;
             const endQ = Math.min(startQ + questionsPerPage - 1, numQuestions);
+            const questionsOnPage = endQ - startQ + 1;
+            const halfPoint = Math.ceil(questionsOnPage / 2);
+            const rowsOnPage = Math.ceil(questionsOnPage / 2);
 
             let tableRows = '';
-            for (let q = startQ; q <= endQ; q++) {
-                const answerIndex = q - 1;
-                const correctAnswer = answers ? answers[answerIndex] : null;
+            for (let row = 0; row < rowsOnPage; row++) {
+                const q1 = startQ + row;
+                const q2 = startQ + row + halfPoint;
 
-                let cells = `<td class="question-num">${q}</td>`;
+                tableRows += '<tr>';
 
-                for (let altIndex = 0; altIndex < numAlternatives; altIndex++) {
-                    const alt = opts[altIndex];
-                    const isCorrect = correctAnswer === alt;
-                    cells += `
-                        <td class="bubble-cell">
-                            <div class="bubble${isCorrect ? ' correct' : ''}">${alt}</div>
-                        </td>
-                    `;
+                if (q1 <= endQ) {
+                    const answerIndex1 = q1 - 1;
+                    const correctAnswer1 = answers ? answers[answerIndex1] : null;
+                    tableRows += `<td class="question-num">${q1}</td>`;
+                    for (let altIndex = 0; altIndex < numAlternatives; altIndex++) {
+                        const alt = opts[altIndex];
+                        const isCorrect = correctAnswer1 === alt;
+                        tableRows += `
+                            <td class="bubble-cell">
+                                <div class="bubble${isCorrect ? ' correct' : ''}">${alt}</div>
+                            </td>
+                        `;
+                    }
+                } else {
+                    tableRows += '<td class="question-num"></td>';
+                    for (let altIndex = 0; altIndex < numAlternatives; altIndex++) {
+                        tableRows += '<td class="bubble-cell"></td>';
+                    }
                 }
-                tableRows += `<tr>${cells}</tr>`;
+
+                tableRows += '<td class="col-divider"></td>';
+
+                if (q2 <= endQ) {
+                    const answerIndex2 = q2 - 1;
+                    const correctAnswer2 = answers ? answers[answerIndex2] : null;
+                    tableRows += `<td class="question-num">${q2}</td>`;
+                    for (let altIndex = 0; altIndex < numAlternatives; altIndex++) {
+                        const alt = opts[altIndex];
+                        const isCorrect = correctAnswer2 === alt;
+                        tableRows += `
+                            <td class="bubble-cell">
+                                <div class="bubble${isCorrect ? ' correct' : ''}">${alt}</div>
+                            </td>
+                        `;
+                    }
+                } else {
+                    tableRows += '<td class="question-num"></td>';
+                    for (let altIndex = 0; altIndex < numAlternatives; altIndex++) {
+                        tableRows += '<td class="bubble-cell"></td>';
+                    }
+                }
+
+                tableRows += '</tr>';
             }
 
             const headerCols = `<th class="question-num">Q</th>` +
+                opts.split('').map(alt => `<th class="alt-header">${alt}</th>`).join('') +
+                '<th class="col-divider"></th>' +
+                `<th class="question-num">Q</th>` +
                 opts.split('').map(alt => `<th class="alt-header">${alt}</th>`).join('');
 
             const pageAnswers = answers ? answers.substring(startQ - 1, endQ) : '';
+            const key1 = pageAnswers.substring(0, halfPoint);
+            const key2 = pageAnswers.substring(halfPoint);
 
             pagesHTML += `
                 <div class="gabarito-page">
                     <div class="gabarito-header">
                         <h1>LeGab - Gabarito</h1>
                         <p>Página ${page + 1} de ${totalPages}</p>
-                        ${pageAnswers ? `<div class="gabarito-key">${pageAnswers}</div>` : ''}
+                        <div class="key-row">
+                            <span class="gabarito-key">${key1}</span>
+                            <span class="key-separator">|</span>
+                            <span class="gabarito-key">${key2}</span>
+                        </div>
                     </div>
                     <table class="gabarito-table">
                         <thead>
@@ -94,7 +139,7 @@ class GabaritoGenerator {
                         </tbody>
                     </table>
                     <div class="gabarito-footer">
-                        <p>${answers ? 'Gabarito para Correção' : 'Gabarito para Preenchimento'}</p>
+                        <p>Questões ${startQ} a ${endQ} de ${numQuestions}</p>
                         <p class="footer-date">Gerado em ${new Date().toLocaleDateString('pt-BR')}</p>
                     </div>
                 </div>
@@ -122,17 +167,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let currentAnswers = '';
     let currentQRData = '';
-    let currentNumQuestions = 0;
+    let currentNumQuestions = 60;
     let currentNumAlternatives = 5;
 
-    function updateGabarito(answers = null) {
-        const pagesHTML = generator.createGabaritoHTML(
-            currentNumQuestions,
-            currentNumAlternatives,
-            answers
-        );
-        gabaritoPages.innerHTML = pagesHTML;
-    }
+    genQuestionsInput.value = 60;
 
     btnGenerate.addEventListener('click', async () => {
         const count = parseInt(genQuestionsInput.value);
@@ -157,7 +195,8 @@ document.addEventListener('DOMContentLoaded', () => {
             currentAnswers = answersInput;
         }
 
-        updateGabarito();
+        const pagesHTML = generator.createGabaritoHTML(count, numAlternatives, null);
+        gabaritoPages.innerHTML = pagesHTML;
         gabaritoResult.classList.remove('hidden');
 
         btnCopyKey.classList.remove('hidden');
@@ -223,7 +262,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (currentAnswers) {
-            updateGabarito(currentAnswers);
+            const pagesHTML = generator.createGabaritoHTML(
+                currentNumQuestions,
+                currentNumAlternatives,
+                currentAnswers
+            );
+            gabaritoPages.innerHTML = pagesHTML;
             btnShowKey.classList.add('hidden');
             showToast('Chave revelada!');
         } else {

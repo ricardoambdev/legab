@@ -240,6 +240,11 @@ body {
     color: var(--error-color);
 }
 
+.stat.blank {
+    background: #FFF3E0;
+    color: #E65100;
+}
+
 .stat.total {
     background: #E3F2FD;
     color: var(--secondary-color);

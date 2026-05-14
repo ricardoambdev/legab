@@ -40,7 +40,7 @@
                 <h3>Ou digite as respostas</h3>
                 <div class="input-group">
                     <label for="manual-answers">Respostas (ex: ABCDED...)</label>
-                    <input type="text" id="manual-answers" placeholder="Digite as respostas..." maxlength="100">
+                    <input type="text" id="manual-answers" placeholder="Digite as respostas..." maxlength="60">
                     <button id="btn-check-manual" class="btn btn-primary">Verificar</button>
                 </div>
             </div>
@@ -56,6 +56,10 @@
                         <div class="stat wrong">
                             <span class="stat-value" id="wrong-count">0</span>
                             <span class="stat-label">Erros</span>
+                        </div>
+                        <div class="stat blank">
+                            <span class="stat-value" id="blank-count">0</span>
+                            <span class="stat-label">Brancas</span>
                         </div>
                         <div class="stat total">
                             <span class="stat-value" id="total-questions">0</span>

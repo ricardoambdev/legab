@@ -24,38 +24,52 @@ class GabaritoOCR {
     }
 
     parseGabarito(text, numQuestions, numAlternatives) {
-        const lines = text.split('\n');
-        const answers = [];
+        const lines = text.split('\n').filter(line => line.trim());
+        const answers = new Array(numQuestions).fill(null);
         const options = 'ABCDE'.substring(0, numAlternatives);
 
         for (const line of lines) {
-            const cleanLine = line.toUpperCase().replace(/[^A-E0-9\s]/g, '');
+            const cleanLine = line.toUpperCase().replace(/[^A-E0-9\s]/g, ' ').trim();
 
-            const numberMatch = cleanLine.match(/(\d+)[\s]+([A-E])/i);
-            if (numberMatch) {
-                const questionNum = parseInt(numberMatch[1]);
-                const answer = numberMatch[2].toUpperCase();
-                if (options.includes(answer)) {
-                    answers[questionNum - 1] = answer;
+            const parts = cleanLine.split(/\s+/).filter(p => p.length > 0);
+
+            for (let i = 0; i < parts.length; i++) {
+                const part = parts[i];
+
+                const numMatch = part.match(/^(\d+)$/);
+                if (numMatch) {
+                    const questionNum = parseInt(numMatch[1]);
+                    if (questionNum >= 1 && questionNum <= numQuestions) {
+                        for (let j = i + 1; j < parts.length && j <= i + numAlternatives; j++) {
+                            const candidate = parts[j].replace(/[^\w]/g, '').toUpperCase();
+                            if (options.includes(candidate) && candidate.length === 1) {
+                                answers[questionNum - 1] = candidate;
+                                break;
+                            }
+                        }
+                    }
                 }
             }
 
-            const spacedMatch = cleanLine.match(/^\s*(\d+)[\s]+([A-E\s]+)$/i);
-            if (spacedMatch) {
-                const questionNum = parseInt(spacedMatch[1]);
-                const answersPart = spacedMatch[2].trim().split(/\s+/);
-                for (let i = 0; i < answersPart.length && answers.length < numQuestions; i++) {
-                    const ans = answersPart[i].toUpperCase();
-                    if (options.includes(ans)) {
-                        if (!answers[questionNum - 1]) {
-                            answers[questionNum - 1] = ans;
+            const numberAnswerPairs = cleanLine.match(/(\d+)[\s]+([A-E])/gi);
+            if (numberAnswerPairs) {
+                for (const pair of numberAnswerPairs) {
+                    const match = pair.match(/(\d+)[\s]+([A-E])/i);
+                    if (match) {
+                        const qNum = parseInt(match[1]);
+                        const answer = match[2].toUpperCase();
+                        if (qNum >= 1 && qNum <= numQuestions && options.includes(answer)) {
+                            answers[qNum - 1] = answer;
                         }
                     }
                 }
             }
         }
 
-        return answers.filter(a => a !== undefined).join('');
+        const detectedCount = answers.filter(a => a !== null).length;
+        console.log(`Detectadas ${detectedCount} de ${numQuestions} respostas`);
+
+        return answers.map(a => a || '').join('');
     }
 }
 
@@ -119,8 +133,14 @@ class Scanner {
         const ocr = new GabaritoOCR();
         await ocr.init();
 
+        updateLoadingStatus('Processando OCR (60 questões)...');
         const text = await ocr.processImage(imageData);
-        const detectedAnswers = ocr.parseGabarito(text, config.numQuestions, config.numAlternatives);
+
+        updateLoadingStatus('Analisando respostas...');
+        const numQuestions = config.numQuestions || 60;
+        const numAlternatives = config.numAlternatives || 5;
+
+        const detectedAnswers = ocr.parseGabarito(text, numQuestions, numAlternatives);
 
         return detectedAnswers;
     }
@@ -151,29 +171,33 @@ class GradeChecker {
 
         let correct = 0;
         let wrong = 0;
+        let blank = 0;
 
-        const maxLen = Math.max(correctAnswers.length, answers.length);
+        const total = correctAnswers.length;
 
-        for (let i = 0; i < maxLen; i++) {
-            const correctChar = correctAnswers[i] || '-';
-            const userChar = answers[i] || '-';
+        for (let i = 0; i < total; i++) {
+            const correctChar = correctAnswers[i];
+            const userChar = answers[i] || '';
 
-            if (i < correctAnswers.length && i < answers.length) {
-                if (correctChar === userChar) {
-                    correct++;
-                } else {
-                    wrong++;
-                }
+            if (!userChar || userChar === '' || userChar === '-') {
+                blank++;
+                wrong++;
+            } else if (correctChar === userChar) {
+                correct++;
+            } else {
+                wrong++;
             }
         }
 
-        const total = correct + wrong;
+        const answeredCount = total - blank;
         const percentage = total > 0 ? Math.round((correct / total) * 100) : 0;
 
         return {
             correct,
             wrong,
+            blank,
             total,
+            answeredCount,
             percentage,
             passingScore: config.passingScore || 60,
             passed: percentage >= (config.passingScore || 60)
@@ -195,7 +219,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('config-questions').textContent = config.numQuestions || '-';
         document.getElementById('config-alternatives').textContent = config.numAlternatives || 5;
     } else {
-        document.getElementById('config-questions').textContent = '20';
+        document.getElementById('config-questions').textContent = '60';
         document.getElementById('config-alternatives').textContent = '5';
     }
 
@@ -282,6 +306,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 function displayResults(result) {
     document.getElementById('correct-count').textContent = result.correct;
     document.getElementById('wrong-count').textContent = result.wrong;
+    document.getElementById('blank-count').textContent = result.blank;
     document.getElementById('total-questions').textContent = result.total;
     document.getElementById('score-percent').textContent = result.percentage + '%';
 
