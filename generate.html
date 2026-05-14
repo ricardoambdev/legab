@@ -23,18 +23,32 @@
             <div class="section">
                 <h2>Gerar Gabarito</h2>
 
-                <div class="form-group">
-                    <label for="gen-questions">Número de Questões</label>
-                    <input type="number" id="gen-questions" min="1" max="200" value="60">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="gen-questions">Total Questões</label>
+                        <input type="number" id="gen-questions" min="1" max="200" value="65">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="gen-alternatives">Alternativas</label>
+                        <select id="gen-alternatives">
+                            <option value="3">3 (A, B, C)</option>
+                            <option value="4">4 (A, B, C, D)</option>
+                            <option value="5" selected>5 (A, B, C, D, E)</option>
+                        </select>
+                    </div>
                 </div>
 
-                <div class="form-group">
-                    <label for="gen-alternatives">Alternativas por Questão</label>
-                    <select id="gen-alternatives">
-                        <option value="3">3 (A, B, C)</option>
-                        <option value="4">4 (A, B, C, D)</option>
-                        <option value="5" selected>5 (A, B, C, D, E)</option>
-                    </select>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="gen-left">Coluna Esquerda</label>
+                        <input type="number" id="gen-left" min="1" max="100" value="33">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="gen-right">Coluna Direita</label>
+                        <input type="number" id="gen-right" min="1" max="100" value="32">
+                    </div>
                 </div>
 
                 <div class="form-group">
@@ -44,6 +58,7 @@
                 </div>
 
                 <button id="btn-generate" class="btn btn-primary">Gerar Gabarito</button>
+                <button id="btn-load-config" class="btn btn-secondary">Carregar Config</button>
             </div>
 
             <div id="gabarito-preview" class="section hidden">
@@ -73,5 +88,17 @@
     <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
     <script src="js/config.js"></script>
     <script src="js/generator.js"></script>
+
+    <style>
+        .form-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        .form-row .form-group {
+            flex: 1;
+            margin-bottom: 0;
+        }
+    </style>
 </body>
 </html>

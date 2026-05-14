@@ -175,6 +175,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const btnCopyKey = document.getElementById('btn-copy-key');
     const btnPrint = document.getElementById('btn-print');
     const btnShowKey = document.getElementById('btn-show-key');
+    const btnLoadConfig = document.getElementById('btn-load-config');
 
     const gabaritoResult = document.getElementById('gabarito-preview');
     const gabaritoPages = document.getElementById('gabarito-pages');
@@ -188,8 +189,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         const config = await configManager.getConfig();
         if (config) {
             currentConfig = config;
-            genQuestionsInput.value = config.numQuestions;
-            genAlternativesSelect.value = config.numAlternatives;
+            genQuestionsInput.value = config.numQuestions || 65;
+            genAlternativesSelect.value = config.numAlternatives || 5;
+            document.getElementById('gen-left').value = config.leftColumn || 33;
+            document.getElementById('gen-right').value = config.rightColumn || 32;
         } else {
             currentConfig = {
                 numQuestions: 65,
@@ -202,9 +205,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     loadDefaultConfig();
 
+    btnLoadConfig.addEventListener('click', async () => {
+        await loadDefaultConfig();
+        showToast('Configuração carregada!');
+    });
+
     btnGenerate.addEventListener('click', async () => {
         const count = parseInt(genQuestionsInput.value);
         const numAlternatives = parseInt(genAlternativesSelect.value);
+        const leftColumn = parseInt(document.getElementById('gen-left').value);
+        const rightColumn = parseInt(document.getElementById('gen-right').value);
         const answersInput = genAnswersInput.value.trim().toUpperCase();
 
         if (count < 1 || count > 200) {
@@ -212,11 +222,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
 
+        if (leftColumn + rightColumn !== count) {
+            showToast(`Colunas (${leftColumn} + ${rightColumn}) devem somar ${count}`, true);
+            return;
+        }
+
         currentConfig = {
             numQuestions: count,
             numAlternatives: numAlternatives,
-            leftColumn: 33,
-            rightColumn: 32
+            leftColumn: leftColumn,
+            rightColumn: rightColumn
         };
         currentAnswers = '';
 
