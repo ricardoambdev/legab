@@ -17,17 +17,17 @@ class GabaritoOCR {
         this.initializing = true;
 
         try {
-            console.log('Iniciando Tesseract Worker...');
+            console.log('Iniciando Tesseract Worker v5...');
 
-            const result = await Tesseract.createWorker('por', 1, {
+            this.worker = await Tesseract.createWorker('por', 1, {
                 logger: m => {
+                    console.log('Tesseract:', m.status, m.progress);
                     if (m.status === 'recognizing text') {
                         updateLoadingStatus(`OCR: ${Math.round(m.progress * 100)}%`);
                     }
                 }
             });
 
-            this.worker = result;
             this.ready = true;
             this.initializing = false;
             console.log('Tesseract Worker pronto');
