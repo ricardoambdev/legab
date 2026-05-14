@@ -67,7 +67,7 @@ class GabaritoOCR {
         }
     }
 
-    parseGabarito(text, numQuestions, numAlternatives) {
+    parseGabarito(text, numQuestions, numAlternatives, leftColumn, rightColumn) {
         addDebugLog('Analisando texto detectado...');
 
         if (!text || typeof text !== 'string' || text.trim() === '') {
@@ -85,6 +85,7 @@ class GabaritoOCR {
 
         const answers = new Array(numQuestions).fill(null);
         const options = 'ABCDE'.substring(0, numAlternatives);
+        const totalPerPage = leftColumn + rightColumn;
 
         let foundCount = 0;
 
@@ -226,10 +227,12 @@ class Scanner {
         updateLoadingStatus('Analisando respostas...');
         addDebugLog('Analisando respostas...');
 
-        const numQuestions = config.numQuestions || 60;
+        const numQuestions = config.numQuestions || 65;
         const numAlternatives = config.numAlternatives || 5;
+        const leftColumn = config.leftColumn || 33;
+        const rightColumn = config.rightColumn || 32;
 
-        const detectedAnswers = ocr.parseGabarito(text, numQuestions, numAlternatives);
+        const detectedAnswers = ocr.parseGabarito(text, numQuestions, numAlternatives, leftColumn, rightColumn);
 
         addDebugLog('Resultado: ' + detectedAnswers);
 

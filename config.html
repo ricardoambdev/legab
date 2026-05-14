@@ -22,26 +22,42 @@
             <div class="section">
                 <h2>Configurações</h2>
 
-                <div class="form-group">
-                    <label for="num-questions">Número de Questões</label>
-                    <input type="number" id="num-questions" min="1" max="200" value="60">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="num-questions">Total de Questões</label>
+                        <input type="number" id="num-questions" min="1" max="200" value="65">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="num-alternatives">Alternativas</label>
+                        <select id="num-alternatives">
+                            <option value="3">3 (A, B, C)</option>
+                            <option value="4">4 (A, B, C, D)</option>
+                            <option value="5" selected>5 (A, B, C, D, E)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="left-column">Coluna Esquerda</label>
+                        <input type="number" id="left-column" min="1" max="100" value="33">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="right-column">Coluna Direita</label>
+                        <input type="number" id="right-column" min="1" max="100" value="32">
+                    </div>
                 </div>
 
                 <div class="form-group">
-                    <label for="num-alternatives">Alternativas por Questão</label>
-                    <select id="num-alternatives">
-                        <option value="3">3 (A, B, C)</option>
-                        <option value="4">4 (A, B, C, D)</option>
-                        <option value="5" selected>5 (A, B, C, D, E)</option>
-                    </select>
-                </div>
                     <label for="passing-score">Nota de aprovação (%)</label>
                     <input type="number" id="passing-score" min="0" max="100" value="60">
                 </div>
 
                 <div class="form-group">
                     <label for="correct-answers">Gabarito Correto (vazio para gerar aleatório)</label>
-                    <input type="text" id="correct-answers" placeholder="Ex: ABCDEDBA..." maxlength="60">
+                    <input type="text" id="correct-answers" placeholder="Ex: ABCDEDBACD..." maxlength="200">
                 </div>
 
                 <button id="btn-save-config" class="btn btn-primary">Salvar Configurações</button>
@@ -50,7 +66,7 @@
 
             <div class="section">
                 <div class="config-status">
-                    <p id="config-status">Status: Não conectado</p>
+                    <p id="config-status">Status: Conectando...</p>
                     <p id="last-updated"></p>
                 </div>
             </div>
@@ -60,6 +76,8 @@
                 <div id="current-config" class="current-config">
                     <p>Questões: <strong id="display-questions">-</strong></p>
                     <p>Alternativas: <strong id="display-alternatives">-</strong></p>
+                    <p>Coluna Esquerda: <strong id="display-left">-</strong></p>
+                    <p>Coluna Direita: <strong id="display-right">-</strong></p>
                     <p>Nota aprovação: <strong id="display-passing">-</strong>%</p>
                     <p>Gabarito: <strong id="display-gabarito">-</strong></p>
                 </div>
@@ -76,15 +94,18 @@
 
             const numQuestionsInput = document.getElementById('num-questions');
             const numAlternativesSelect = document.getElementById('num-alternatives');
+            const leftColumnInput = document.getElementById('left-column');
+            const rightColumnInput = document.getElementById('right-column');
             const passingScoreInput = document.getElementById('passing-score');
             const correctAnswersInput = document.getElementById('correct-answers');
             const btnSave = document.getElementById('btn-save-config');
             const btnLoad = document.getElementById('btn-load-config');
             const statusEl = document.getElementById('config-status');
-            const lastUpdatedEl = document.getElementById('last-updated');
 
             const displayQuestions = document.getElementById('display-questions');
             const displayAlternatives = document.getElementById('display-alternatives');
+            const displayLeft = document.getElementById('display-left');
+            const displayRight = document.getElementById('display-right');
             const displayPassing = document.getElementById('display-passing');
             const displayGabarito = document.getElementById('display-gabarito');
 
@@ -101,10 +122,14 @@
                 if (config) {
                     displayQuestions.textContent = config.numQuestions;
                     displayAlternatives.textContent = config.numAlternatives;
+                    displayLeft.textContent = config.leftColumn;
+                    displayRight.textContent = config.rightColumn;
                     displayPassing.textContent = config.passingScore;
                     displayGabarito.textContent = config.correctAnswers || '(aleatório)';
                     numQuestionsInput.value = config.numQuestions;
                     numAlternativesSelect.value = config.numAlternatives || 5;
+                    leftColumnInput.value = config.leftColumn || 33;
+                    rightColumnInput.value = config.rightColumn || 32;
                     passingScoreInput.value = config.passingScore;
                     if (config.correctAnswers) {
                         correctAnswersInput.value = config.correctAnswers;
@@ -115,11 +140,28 @@
             btnSave.addEventListener('click', async () => {
                 const numQuestions = parseInt(numQuestionsInput.value);
                 const numAlternatives = parseInt(numAlternativesSelect.value);
+                const leftColumn = parseInt(leftColumnInput.value);
+                const rightColumn = parseInt(rightColumnInput.value);
                 const passingScore = parseInt(passingScoreInput.value);
                 let correctAnswers = correctAnswersInput.value.toUpperCase().trim();
 
                 if (numQuestions < 1 || numQuestions > 200) {
                     showToast('Número de questões deve ser entre 1 e 200', true);
+                    return;
+                }
+
+                if (leftColumn < 1 || leftColumn > 100) {
+                    showToast('Coluna esquerda deve ser entre 1 e 100', true);
+                    return;
+                }
+
+                if (rightColumn < 1 || rightColumn > 100) {
+                    showToast('Coluna direita deve ser entre 1 e 100', true);
+                    return;
+                }
+
+                if (leftColumn + rightColumn !== numQuestions) {
+                    showToast(`Total de questões (${numQuestions}) deve ser igual a soma das colunas (${leftColumn} + ${rightColumn})`, true);
                     return;
                 }
 
@@ -139,6 +181,8 @@
                 const config = {
                     numQuestions,
                     numAlternatives,
+                    leftColumn,
+                    rightColumn,
                     passingScore,
                     correctAnswers,
                     updatedAt: new Date().toISOString()
@@ -179,5 +223,17 @@
             await updateDisplay();
         });
     </script>
+
+    <style>
+        .form-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        .form-row .form-group {
+            flex: 1;
+            margin-bottom: 0;
+        }
+    </style>
 </body>
 </html>

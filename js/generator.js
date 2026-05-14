@@ -12,13 +12,15 @@ class GabaritoGenerator {
         return result;
     }
 
-    generateQRData(answers, numQuestions, numAlternatives) {
+    generateQRData(answers, config) {
         return JSON.stringify({
             type: 'legab_gabarito',
             answers: answers,
-            questions: numQuestions,
-            alternatives: numAlternatives,
-            version: '2.0',
+            questions: config.numQuestions,
+            alternatives: config.numAlternatives,
+            leftColumn: config.leftColumn,
+            rightColumn: config.rightColumn,
+            version: '3.0',
             generated: new Date().toISOString()
         });
     }
@@ -44,27 +46,30 @@ class GabaritoGenerator {
         return { valid: true, answers: upperAnswers };
     }
 
-    createGabaritoHTML(numQuestions, numAlternatives, answers = null) {
+    createGabaritoHTML(config, answers = null) {
+        const numQuestions = config.numQuestions || 65;
+        const numAlternatives = config.numAlternatives || 5;
+        const leftColumn = config.leftColumn || 33;
+        const rightColumn = config.rightColumn || 32;
+
         const opts = this.options.substring(0, numAlternatives);
-        const questionsPerPage = 60;
+        const questionsPerPage = leftColumn + rightColumn;
         const totalPages = Math.ceil(numQuestions / questionsPerPage);
         let pagesHTML = '';
 
         for (let page = 0; page < totalPages; page++) {
             const startQ = page * questionsPerPage + 1;
             const endQ = Math.min(startQ + questionsPerPage - 1, numQuestions);
-            const questionsOnPage = endQ - startQ + 1;
-            const halfPoint = 30;
-            const rowsOnPage = 30;
+            const rowsOnPage = leftColumn;
 
             let tableRows = '';
             for (let row = 0; row < rowsOnPage; row++) {
                 const q1 = startQ + row;
-                const q2 = startQ + row + halfPoint;
+                const q2 = startQ + row + leftColumn;
 
                 tableRows += '<tr>';
 
-                if (q1 >= startQ && q1 <= Math.min(startQ + halfPoint - 1, numQuestions)) {
+                if (q1 >= startQ && q1 <= Math.min(startQ + leftColumn - 1, numQuestions)) {
                     const answerIndex1 = q1 - 1;
                     const correctAnswer1 = answers ? answers[answerIndex1] : null;
                     tableRows += `<td class="question-num">${q1}</td>`;
@@ -86,7 +91,7 @@ class GabaritoGenerator {
 
                 tableRows += '<td class="col-divider"></td>';
 
-                if (q2 >= startQ + halfPoint && q2 <= numQuestions) {
+                if (q2 >= startQ + leftColumn && q2 <= numQuestions) {
                     const answerIndex2 = q2 - 1;
                     const correctAnswer2 = answers ? answers[answerIndex2] : null;
                     tableRows += `<td class="question-num">${q2}</td>`;
@@ -115,19 +120,29 @@ class GabaritoGenerator {
                 `<th class="question-num">Q</th>` +
                 opts.split('').map(alt => `<th class="alt-header">${alt}</th>`).join('');
 
-            const pageAnswers = answers ? answers.substring(startQ - 1, endQ) : '';
-            const key1 = pageAnswers.substring(0, halfPoint);
-            const key2 = pageAnswers.substring(halfPoint);
+            const leftStart = startQ;
+            const leftEnd = Math.min(startQ + leftColumn - 1, numQuestions);
+            const rightStart = startQ + leftColumn;
+            const rightEnd = Math.min(startQ + leftColumn + rightColumn - 1, numQuestions);
+
+            const leftKey = answers ? answers.substring(leftStart - 1, leftEnd) : '';
+            const rightKey = answers ? answers.substring(rightStart - 1, rightEnd) : '';
 
             pagesHTML += `
                 <div class="gabarito-page">
                     <div class="gabarito-header">
                         <h1>LeGab - Gabarito</h1>
-                        <p>Página ${page + 1} de ${totalPages}</p>
+                        <p>Página ${page + 1} de ${totalPages} | Questões ${startQ} a ${endQ}</p>
                         <div class="key-row">
-                            <span class="gabarito-key">${key1}</span>
+                            <div class="key-group">
+                                <span class="key-label">Coluna Esquerda (${leftColumn})</span>
+                                <span class="gabarito-key">${leftKey}</span>
+                            </div>
                             <span class="key-separator">|</span>
-                            <span class="gabarito-key">${key2}</span>
+                            <div class="key-group">
+                                <span class="key-label">Coluna Direita (${rightColumn})</span>
+                                <span class="gabarito-key">${rightKey}</span>
+                            </div>
                         </div>
                     </div>
                     <table class="gabarito-table">
@@ -139,8 +154,7 @@ class GabaritoGenerator {
                         </tbody>
                     </table>
                     <div class="gabarito-footer">
-                        <p>Questões ${startQ} a ${endQ} de ${numQuestions}</p>
-                        <p class="footer-date">Gerado em ${new Date().toLocaleDateString('pt-BR')}</p>
+                        <p>Gerado em ${new Date().toLocaleDateString('pt-BR')}</p>
                     </div>
                 </div>
             `;
@@ -150,8 +164,9 @@ class GabaritoGenerator {
     }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     const generator = new GabaritoGenerator();
+    const configManager = new ConfigManager();
 
     const genQuestionsInput = document.getElementById('gen-questions');
     const genAlternativesSelect = document.getElementById('gen-alternatives');
@@ -165,12 +180,27 @@ document.addEventListener('DOMContentLoaded', () => {
     const gabaritoPages = document.getElementById('gabarito-pages');
     const qrcodeContainer = document.getElementById('qrcode-container');
 
+    let currentConfig = null;
     let currentAnswers = '';
     let currentQRData = '';
-    let currentNumQuestions = 60;
-    let currentNumAlternatives = 5;
 
-    genQuestionsInput.value = 60;
+    async function loadDefaultConfig() {
+        const config = await configManager.getConfig();
+        if (config) {
+            currentConfig = config;
+            genQuestionsInput.value = config.numQuestions;
+            genAlternativesSelect.value = config.numAlternatives;
+        } else {
+            currentConfig = {
+                numQuestions: 65,
+                numAlternatives: 5,
+                leftColumn: 33,
+                rightColumn: 32
+            };
+        }
+    }
+
+    loadDefaultConfig();
 
     btnGenerate.addEventListener('click', async () => {
         const count = parseInt(genQuestionsInput.value);
@@ -182,8 +212,12 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        currentNumQuestions = count;
-        currentNumAlternatives = numAlternatives;
+        currentConfig = {
+            numQuestions: count,
+            numAlternatives: numAlternatives,
+            leftColumn: 33,
+            rightColumn: 32
+        };
         currentAnswers = '';
 
         if (answersInput) {
@@ -195,7 +229,7 @@ document.addEventListener('DOMContentLoaded', () => {
             currentAnswers = answersInput;
         }
 
-        const pagesHTML = generator.createGabaritoHTML(count, numAlternatives, null);
+        const pagesHTML = generator.createGabaritoHTML(currentConfig, null);
         gabaritoPages.innerHTML = pagesHTML;
         gabaritoResult.classList.remove('hidden');
 
@@ -206,7 +240,7 @@ document.addEventListener('DOMContentLoaded', () => {
         qrcodeContainer.innerHTML = '';
 
         if (currentAnswers) {
-            currentQRData = generator.generateQRData(currentAnswers, count, numAlternatives);
+            currentQRData = generator.generateQRData(currentAnswers, currentConfig);
 
             QRCode.toCanvas(currentQRData, {
                 width: 200,
@@ -225,7 +259,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         } else {
             const tempAnswers = generator.generateRandomAnswers(count, numAlternatives);
-            currentQRData = generator.generateQRData(tempAnswers, count, numAlternatives);
+            currentQRData = generator.generateQRData(tempAnswers, currentConfig);
 
             QRCode.toCanvas(currentQRData, {
                 width: 200,
@@ -252,8 +286,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (answersInput) {
                 const validation = generator.validateAnswers(
                     answersInput,
-                    currentNumQuestions,
-                    currentNumAlternatives
+                    currentConfig.numQuestions,
+                    currentConfig.numAlternatives
                 );
                 if (validation.valid) {
                     currentAnswers = answersInput;
@@ -262,14 +296,25 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (currentAnswers) {
-            const pagesHTML = generator.createGabaritoHTML(
-                currentNumQuestions,
-                currentNumAlternatives,
-                currentAnswers
-            );
+            const pagesHTML = generator.createGabaritoHTML(currentConfig, currentAnswers);
             gabaritoPages.innerHTML = pagesHTML;
             btnShowKey.classList.add('hidden');
             showToast('Chave revelada!');
+
+            qrcodeContainer.innerHTML = '';
+            currentQRData = generator.generateQRData(currentAnswers, currentConfig);
+
+            QRCode.toCanvas(currentQRData, {
+                width: 200,
+                margin: 2,
+                color: {
+                    dark: '#000000',
+                    light: '#ffffff'
+                }
+            }, (error, canvas) => {
+                if (error) return;
+                qrcodeContainer.appendChild(canvas);
+            });
         } else {
             showToast('Digite as respostas corretas primeiro', true);
         }
@@ -283,8 +328,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const dataToCopy = JSON.stringify({
             answers: currentAnswers,
-            questions: currentNumQuestions,
-            alternatives: currentNumAlternatives
+            questions: currentConfig.numQuestions,
+            alternatives: currentConfig.numAlternatives,
+            leftColumn: currentConfig.leftColumn,
+            rightColumn: currentConfig.rightColumn
         });
 
         navigator.clipboard.writeText(dataToCopy).then(() => {
