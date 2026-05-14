@@ -12,44 +12,39 @@ class GabaritoOCR {
             this.ready = true;
         } catch (error) {
             console.error('Erro ao inicializar Tesseract:', error);
-            throw error;
+            throw new Error('Falha ao inicializar OCR. Verifique sua conexão com a internet.');
         }
     }
 
     async processImage(imageSource) {
         await this.init();
 
-        const result = await this.worker.recognize(imageSource);
-        return result.data.text;
+        try {
+            const result = await this.worker.recognize(imageSource);
+            return result.data.text;
+        } catch (error) {
+            console.error('Erro no reconhecimento:', error);
+            throw new Error('Falha ao processar imagem.');
+        }
     }
 
     parseGabarito(text, numQuestions, numAlternatives) {
+        if (!text || typeof text !== 'string') {
+            return '';
+        }
+
         const lines = text.split('\n').filter(line => line.trim());
+        if (lines.length === 0) {
+            return '';
+        }
+
         const answers = new Array(numQuestions).fill(null);
         const options = 'ABCDE'.substring(0, numAlternatives);
 
+        console.log('Texto OCR detectado:', text.substring(0, 200));
+
         for (const line of lines) {
             const cleanLine = line.toUpperCase().replace(/[^A-E0-9\s]/g, ' ').trim();
-
-            const parts = cleanLine.split(/\s+/).filter(p => p.length > 0);
-
-            for (let i = 0; i < parts.length; i++) {
-                const part = parts[i];
-
-                const numMatch = part.match(/^(\d+)$/);
-                if (numMatch) {
-                    const questionNum = parseInt(numMatch[1]);
-                    if (questionNum >= 1 && questionNum <= numQuestions) {
-                        for (let j = i + 1; j < parts.length && j <= i + numAlternatives; j++) {
-                            const candidate = parts[j].replace(/[^\w]/g, '').toUpperCase();
-                            if (options.includes(candidate) && candidate.length === 1) {
-                                answers[questionNum - 1] = candidate;
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
 
             const numberAnswerPairs = cleanLine.match(/(\d+)[\s]+([A-E])/gi);
             if (numberAnswerPairs) {
@@ -60,6 +55,24 @@ class GabaritoOCR {
                         const answer = match[2].toUpperCase();
                         if (qNum >= 1 && qNum <= numQuestions && options.includes(answer)) {
                             answers[qNum - 1] = answer;
+                        }
+                    }
+                }
+            }
+
+            const parts = cleanLine.split(/\s+/).filter(p => p.length > 0);
+            for (let i = 0; i < parts.length; i++) {
+                const part = parts[i];
+                const numMatch = part.match(/^(\d+)$/);
+                if (numMatch) {
+                    const questionNum = parseInt(numMatch[1]);
+                    if (questionNum >= 1 && questionNum <= numQuestions) {
+                        for (let j = i + 1; j < parts.length && j <= i + numAlternatives; j++) {
+                            const candidate = parts[j].replace(/[^\w]/g, '').toUpperCase();
+                            if (options.includes(candidate) && candidate.length === 1) {
+                                answers[questionNum - 1] = candidate;
+                                break;
+                            }
                         }
                     }
                 }
@@ -79,14 +92,9 @@ class Scanner {
         this.canvas = null;
         this.stream = null;
         this.scanning = false;
-        this.onResult = null;
-        this.onError = null;
     }
 
-    async start(onResult, onError) {
-        this.onResult = onResult;
-        this.onError = onError;
-
+    async start(onError) {
         try {
             this.stream = await navigator.mediaDevices.getUserMedia({
                 video: {
@@ -124,6 +132,10 @@ class Scanner {
         const width = this.video.videoWidth;
         const height = this.video.videoHeight;
 
+        if (width === 0 || height === 0) {
+            throw new Error('Não foi possível capturar a imagem. Tente novamente.');
+        }
+
         this.canvas.width = width;
         this.canvas.height = height;
         ctx.drawImage(this.video, 0, 0);
@@ -131,12 +143,12 @@ class Scanner {
         const imageData = this.canvas.toDataURL('image/png');
 
         const ocr = new GabaritoOCR();
-        await ocr.init();
 
-        updateLoadingStatus('Processando OCR (60 questões)...');
+        updateLoadingStatus('Iniciando OCR...');
         const text = await ocr.processImage(imageData);
 
         updateLoadingStatus('Analisando respostas...');
+
         const numQuestions = config.numQuestions || 60;
         const numAlternatives = config.numAlternatives || 5;
 
@@ -165,7 +177,7 @@ class Scanner {
 }
 
 class GradeChecker {
-    async checkAnswers(userAnswers, config) {
+    checkAnswers(userAnswers, config) {
         const correctAnswers = config.correctAnswers.toUpperCase();
         const answers = userAnswers.toUpperCase();
 
@@ -189,7 +201,6 @@ class GradeChecker {
             }
         }
 
-        const answeredCount = total - blank;
         const percentage = total > 0 ? Math.round((correct / total) * 100) : 0;
 
         return {
@@ -197,7 +208,6 @@ class GradeChecker {
             wrong,
             blank,
             total,
-            answeredCount,
             percentage,
             passingScore: config.passingScore || 60,
             passed: percentage >= (config.passingScore || 60)
@@ -214,13 +224,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     gradeChecker = new GradeChecker();
     configManager = new ConfigManager();
 
+    configManager.onReady(() => {
+        console.log('ConfigManager pronto');
+    });
+
     const config = await configManager.getConfig();
     if (config) {
-        document.getElementById('config-questions').textContent = config.numQuestions || '-';
+        document.getElementById('config-questions').textContent = config.numQuestions || '60';
         document.getElementById('config-alternatives').textContent = config.numAlternatives || 5;
     } else {
         document.getElementById('config-questions').textContent = '60';
-        document.getElementById('config-alternatives').textContent = '5';
+        document.getElementById('config-alternatives').textContent = 5;
     }
 
     const btnStart = document.getElementById('btn-start');
@@ -231,41 +245,49 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     btnStart.addEventListener('click', async () => {
         showToast('Iniciando câmera...');
-        await scanner.start(
-            null,
-            (error) => showToast('Erro: ' + error.message, true)
+        const success = await scanner.start(
+            (error) => showToast('Erro na câmera: ' + error.message, true)
         );
+        if (!success) {
+            showToast('Não foi possível iniciar a câmera', true);
+        }
     });
 
     btnCapture.addEventListener('click', async () => {
-        const cfg = await configManager.getConfig();
-        if (!cfg || !cfg.correctAnswers) {
-            showToast('Configure o gabarito primeiro!', true);
-            return;
-        }
-
-        showLoading(true);
-        updateLoadingStatus('Capturando imagem...');
-
         try {
-            updateLoadingStatus('Processando OCR...');
+            const cfg = await configManager.getConfig();
+
+            if (!cfg) {
+                showToast('Configuração não encontrada. Configure o gabarito primeiro.', true);
+                return;
+            }
+
+            if (!cfg.correctAnswers) {
+                showToast('Gabarito não configurado. Configure as respostas corretas.', true);
+                return;
+            }
+
+            showLoading(true);
+            updateLoadingStatus('Capturando imagem...');
+
             const detectedAnswers = await scanner.captureAndProcess(cfg);
 
+            showToast(`Detectado: ${detectedAnswers || 'nenhuma resposta'}`);
+
             if (!detectedAnswers || detectedAnswers.length === 0) {
-                showToast('Não foi possível detectar as respostas', true);
+                showToast('Não foi possível detectar as respostas. Tente novamente.', true);
                 showLoading(false);
                 return;
             }
 
-            showToast(`Detectado: ${detectedAnswers}`);
-
             updateLoadingStatus('Verificando...');
-            const result = await gradeChecker.checkAnswers(detectedAnswers, cfg);
+            const result = gradeChecker.checkAnswers(detectedAnswers, cfg);
             displayResults(result);
+            showLoading(false);
+
         } catch (error) {
-            console.error('Erro no processamento:', error);
-            showToast('Erro: ' + error.message, true);
-        } finally {
+            console.error('Erro completo:', error);
+            showToast('Erro: ' + (error.message || 'Algo deu errado'), true);
             showLoading(false);
         }
     });
@@ -287,7 +309,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
 
-        const result = await gradeChecker.checkAnswers(answers, cfg);
+        const result = gradeChecker.checkAnswers(answers, cfg);
         displayResults(result);
     });
 
@@ -296,7 +318,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const answers = manualInput.value.trim().toUpperCase();
             const cfg = await configManager.getConfig();
             if (cfg && cfg.correctAnswers) {
-                const result = await gradeChecker.checkAnswers(answers, cfg);
+                const result = gradeChecker.checkAnswers(answers, cfg);
                 displayResults(result);
             }
         }
@@ -325,19 +347,26 @@ function displayResults(result) {
 
 function showLoading(show) {
     document.getElementById('loading-section').classList.toggle('hidden', !show);
-    document.getElementById('result-section').classList.add('hidden');
+    if (show) {
+        document.getElementById('result-section').classList.add('hidden');
+    }
 }
 
 function updateLoadingStatus(text) {
-    document.getElementById('loading-status').textContent = text;
+    const el = document.getElementById('loading-status');
+    if (el) {
+        el.textContent = text;
+    }
 }
 
 function showToast(message, isError = false) {
     const toast = document.getElementById('toast');
-    toast.textContent = message;
-    toast.className = `toast ${isError ? 'error' : 'success'}`;
-    toast.classList.remove('hidden');
-    setTimeout(() => toast.classList.add('hidden'), 3000);
+    if (toast) {
+        toast.textContent = message;
+        toast.className = `toast ${isError ? 'error' : 'success'}`;
+        toast.classList.remove('hidden');
+        setTimeout(() => toast.classList.add('hidden'), 4000);
+    }
 }
 
 window.Scanner = Scanner;
