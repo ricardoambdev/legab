@@ -17,25 +17,33 @@ class GabaritoOCR {
         this.initializing = true;
 
         try {
-            console.log('Iniciando Tesseract Worker v5...');
+            addDebugLog('Baixando modelo OCR...');
 
-            this.worker = await Tesseract.createWorker('por', 1, {
+            const worker = await Tesseract.createWorker('por', 1, {
                 logger: m => {
                     console.log('Tesseract:', m.status, m.progress);
-                    if (m.status === 'recognizing text') {
-                        updateLoadingStatus(`OCR: ${Math.round(m.progress * 100)}%`);
+                    if (m.status === 'loading tesseract core') {
+                        addDebugLog('Baixando núcleo do OCR...');
+                    } else if (m.status === 'initializing tesseract') {
+                        addDebugLog('Inicializando OCR...');
+                    } else if (m.status === 'loading language traineddata') {
+                        addDebugLog('Carregando dados do idioma...');
+                    } else if (m.status === 'recognizing text') {
+                        updateLoadingStatus(`Reconhecendo: ${Math.round(m.progress * 100)}%`);
                     }
                 }
             });
 
+            this.worker = worker;
             this.ready = true;
             this.initializing = false;
-            console.log('Tesseract Worker pronto');
+            addDebugLog('OCR pronto!');
             return true;
         } catch (error) {
             console.error('Erro ao criar worker Tesseract:', error);
             this.initializing = false;
-            throw new Error('Falha ao inicializar OCR. Verifique sua conexão com a internet.');
+            addDebugLog('ERRO: ' + error.message);
+            throw new Error('Falha ao inicializar OCR: ' + error.message);
         }
     }
 
@@ -45,38 +53,40 @@ class GabaritoOCR {
         }
 
         try {
-            console.log('Iniciando reconhecimento...');
+            addDebugLog('Processando imagem...');
 
             const result = await this.worker.recognize(imageSource);
 
-            console.log('Resultado OCR:', result.data.text.substring(0, 100));
+            addDebugLog('Texto detectado: ' + result.data.text.substring(0, 50) + '...');
 
             return result.data.text;
         } catch (error) {
             console.error('Erro no reconhecimento:', error);
+            addDebugLog('ERRO no OCR: ' + error.message);
             throw new Error('Falha ao processar imagem com OCR.');
         }
     }
 
     parseGabarito(text, numQuestions, numAlternatives) {
+        addDebugLog('Analisando texto detectado...');
+
         if (!text || typeof text !== 'string' || text.trim() === '') {
-            console.log('Texto OCR vazio ou inválido');
+            addDebugLog('Texto OCR vazio!');
             return '';
         }
 
         const lines = text.split('\n').filter(line => line.trim());
 
-        if (lines.length === 0) {
-            console.log('Nenhuma linha válida encontrada');
-            return '';
-        }
+        addDebugLog(`Encontradas ${lines.length} linhas`);
 
-        console.log(`Encontradas ${lines.length} linhas`);
+        if (lines.length > 0) {
+            addDebugLog('Primeira linha: ' + lines[0].substring(0, 40));
+        }
 
         const answers = new Array(numQuestions).fill(null);
         const options = 'ABCDE'.substring(0, numAlternatives);
 
-        console.log('Procurando respostas...');
+        let foundCount = 0;
 
         for (const line of lines) {
             const cleanLine = line.toUpperCase().replace(/[^A-E0-9\s]/g, ' ').trim();
@@ -90,6 +100,7 @@ class GabaritoOCR {
                         const answer = match[2].toUpperCase();
                         if (qNum >= 1 && qNum <= numQuestions && options.includes(answer)) {
                             answers[qNum - 1] = answer;
+                            foundCount++;
                         }
                     }
                 }
@@ -106,6 +117,7 @@ class GabaritoOCR {
                             const candidate = parts[j].replace(/[^\w]/g, '').toUpperCase();
                             if (options.includes(candidate) && candidate.length === 1) {
                                 answers[questionNum - 1] = candidate;
+                                foundCount++;
                                 i = j;
                                 break;
                             }
@@ -115,11 +127,11 @@ class GabaritoOCR {
             }
         }
 
-        const detectedCount = answers.filter(a => a !== null).length;
-        console.log(`Detectadas ${detectedCount} de ${numQuestions} respostas`);
+        addDebugLog(`Detectadas ${foundCount} respostas`);
 
-        if (detectedCount === 0) {
-            console.log('Texto completo OCR:', text);
+        if (foundCount === 0) {
+            addDebugLog('Nenhuma resposta detectada!');
+            addDebugLog('Texto completo: ' + text);
         }
 
         return answers.map(a => a || '').join('');
@@ -136,7 +148,7 @@ class Scanner {
 
     async start(onError) {
         try {
-            console.log('Solicitando acesso à câmera...');
+            addDebugLog('Solicitando acesso à câmera...');
 
             this.stream = await navigator.mediaDevices.getUserMedia({
                 video: {
@@ -147,7 +159,7 @@ class Scanner {
                 audio: false
             });
 
-            console.log('Câmera acessada com sucesso');
+            addDebugLog('Câmera acessada');
 
             this.video = document.getElementById('video');
             this.canvas = document.getElementById('canvas');
@@ -160,7 +172,7 @@ class Scanner {
 
             await this.video.play();
 
-            console.log(`Vídeo iniciado: ${this.video.videoWidth}x${this.video.videoHeight}`);
+            addDebugLog(`Vídeo: ${this.video.videoWidth}x${this.video.videoHeight}`);
 
             document.getElementById('btn-start').classList.add('hidden');
             document.getElementById('btn-capture').classList.remove('hidden');
@@ -171,6 +183,7 @@ class Scanner {
             return true;
         } catch (error) {
             console.error('Erro ao acessar câmera:', error);
+            addDebugLog('ERRO câmera: ' + error.message);
             if (onError) onError(error);
             return false;
         }
@@ -185,10 +198,10 @@ class Scanner {
         const width = this.video.videoWidth;
         const height = this.video.videoHeight;
 
-        console.log(`Capturando imagem: ${width}x${height}`);
+        addDebugLog(`Capturando: ${width}x${height}`);
 
         if (width === 0 || height === 0) {
-            throw new Error('Não foi possível capturar a imagem. Tente novamente.');
+            throw new Error('Não foi possível capturar a imagem.');
         }
 
         this.canvas.width = width;
@@ -196,22 +209,29 @@ class Scanner {
         ctx.drawImage(this.video, 0, 0);
 
         const imageData = this.canvas.toDataURL('image/jpeg', 0.8);
-        console.log('Imagem capturada, tamanho:', imageData.length);
+        addDebugLog(`Imagem: ${(imageData.length / 1024).toFixed(1)}KB`);
 
         const ocr = new GabaritoOCR();
 
         updateLoadingStatus('Iniciando OCR...');
+        addDebugLog('Iniciando OCR...');
+
         await ocr.init();
 
         updateLoadingStatus('Reconhecendo texto...');
+        addDebugLog('Reconhecendo texto...');
+
         const text = await ocr.processImage(imageData);
 
         updateLoadingStatus('Analisando respostas...');
+        addDebugLog('Analisando respostas...');
 
         const numQuestions = config.numQuestions || 60;
         const numAlternatives = config.numAlternatives || 5;
 
         const detectedAnswers = ocr.parseGabarito(text, numQuestions, numAlternatives);
+
+        addDebugLog('Resultado: ' + detectedAnswers);
 
         return detectedAnswers;
     }
@@ -278,19 +298,33 @@ let scanner = null;
 let gradeChecker = null;
 let configManager = null;
 
+function addDebugLog(message) {
+    console.log(message);
+    const debugLog = document.getElementById('debug-log');
+    const debugSection = document.getElementById('debug-section');
+    if (debugLog) {
+        const time = new Date().toLocaleTimeString();
+        debugLog.innerHTML += `<p>[${time}] ${message}</p>`;
+        debugSection.classList.remove('hidden');
+    }
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
     scanner = new Scanner();
     gradeChecker = new GradeChecker();
     configManager = new ConfigManager();
 
-    console.log('Verificando configuração...');
+    addDebugLog('Carregando...');
+
     const config = await configManager.getConfig();
     if (config) {
         document.getElementById('config-questions').textContent = config.numQuestions || '60';
         document.getElementById('config-alternatives').textContent = config.numAlternatives || 5;
+        addDebugLog('Config carregada: ' + config.numQuestions + ' questões');
     } else {
         document.getElementById('config-questions').textContent = '60';
         document.getElementById('config-alternatives').textContent = 5;
+        addDebugLog('Sem config - usando padrão');
     }
 
     const btnStart = document.getElementById('btn-start');
@@ -312,40 +346,44 @@ document.addEventListener('DOMContentLoaded', async () => {
     btnCapture.addEventListener('click', async () => {
         try {
             const cfg = await configManager.getConfig();
-            console.log('Config carregada:', cfg);
 
             if (!cfg) {
-                showToast('Configuração não encontrada. Configure o gabarito primeiro.', true);
+                showToast('Configure o gabarito primeiro!', true);
+                addDebugLog('ERRO: Sem configuração');
                 return;
             }
 
             if (!cfg.correctAnswers) {
-                showToast('Gabarito não configurado. Configure as respostas corretas.', true);
+                showToast('Gabarito não configurado!', true);
+                addDebugLog('ERRO: Sem gabarito');
                 return;
             }
 
+            addDebugLog('Iniciando captura...');
             showLoading(true);
-            updateLoadingStatus('Preparando captura...');
+            updateLoadingStatus('Preparando...');
 
             const detectedAnswers = await scanner.captureAndProcess(cfg);
-            console.log('Respostas detectadas:', detectedAnswers);
-
-            showToast(`Detectado: ${detectedAnswers || 'nenhuma resposta'}`);
 
             if (!detectedAnswers || detectedAnswers.length === 0) {
-                showToast('Não foi possível detectar as respostas. Tente melhor a iluminação.', true);
+                showToast('Nenhuma resposta detectada. Tente melhor a iluminação.', true);
+                addDebugLog('FALHA: Nenhuma resposta detectada');
                 showLoading(false);
                 return;
             }
 
-            updateLoadingStatus('Calculando resultado...');
+            showToast(`Detectado: ${detectedAnswers}`);
+
             const result = gradeChecker.checkAnswers(detectedAnswers, cfg);
             displayResults(result);
             showLoading(false);
 
+            addDebugLog('SUCESSO! Resultado: ' + result.correct + ' acertos');
+
         } catch (error) {
             console.error('Erro completo:', error);
-            showToast('Erro: ' + (error.message || 'Algo deu errado'), true);
+            addDebugLog('ERRO: ' + error.message);
+            showToast('Erro: ' + error.message, true);
             showLoading(false);
         }
     });
