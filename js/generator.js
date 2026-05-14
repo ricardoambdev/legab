@@ -46,7 +46,7 @@ class GabaritoGenerator {
 
     createGabaritoHTML(numQuestions, numAlternatives, answers = null) {
         const opts = this.options.substring(0, numAlternatives);
-        const questionsPerPage = 30;
+        const questionsPerPage = 60;
         const totalPages = Math.ceil(numQuestions / questionsPerPage);
         let pagesHTML = '';
 
@@ -54,8 +54,8 @@ class GabaritoGenerator {
             const startQ = page * questionsPerPage + 1;
             const endQ = Math.min(startQ + questionsPerPage - 1, numQuestions);
             const questionsOnPage = endQ - startQ + 1;
-            const halfPoint = Math.ceil(questionsOnPage / 2);
-            const rowsOnPage = Math.ceil(questionsOnPage / 2);
+            const halfPoint = 30;
+            const rowsOnPage = 30;
 
             let tableRows = '';
             for (let row = 0; row < rowsOnPage; row++) {
@@ -64,7 +64,7 @@ class GabaritoGenerator {
 
                 tableRows += '<tr>';
 
-                if (q1 <= endQ) {
+                if (q1 >= startQ && q1 <= Math.min(startQ + halfPoint - 1, numQuestions)) {
                     const answerIndex1 = q1 - 1;
                     const correctAnswer1 = answers ? answers[answerIndex1] : null;
                     tableRows += `<td class="question-num">${q1}</td>`;
@@ -86,7 +86,7 @@ class GabaritoGenerator {
 
                 tableRows += '<td class="col-divider"></td>';
 
-                if (q2 <= endQ) {
+                if (q2 >= startQ + halfPoint && q2 <= numQuestions) {
                     const answerIndex2 = q2 - 1;
                     const correctAnswer2 = answers ? answers[answerIndex2] : null;
                     tableRows += `<td class="question-num">${q2}</td>`;
