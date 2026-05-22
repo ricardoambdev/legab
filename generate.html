@@ -31,56 +31,43 @@
         </header>
 
         <main class="md-main">
-            <div id="no-config-msg" class="md-card hidden">
-                <div class="empty-state">
-                    <span class="material-icons">info</span>
-                    <p>Configure o gabarito primeiro</p>
-                    <a href="config.html" class="md-btn md-btn-primary">
-                        <span class="material-icons">settings</span>
-                        Ir para Config
-                    </a>
+            <div class="md-card">
+                <h2 class="md-card-title">Simulado Trimestral - Folha de Respostas</h2>
+                <p class="md-hint">Escolha o tipo de gabarito para imprimir</p>
+
+                <div class="generate-options">
+                    <button id="btn-generate-blank" class="generate-btn">
+                        <span class="material-icons">description</span>
+                        <strong>Gabarito em Branco</strong>
+                        <small>Para o aluno preencher</small>
+                    </button>
+
+                    <button id="btn-generate-key" class="generate-btn">
+                        <span class="material-icons">check_circle</span>
+                        <strong>Gabarito com Chave</strong>
+                        <small>Para correção</small>
+                    </button>
                 </div>
             </div>
 
-            <div id="generate-section">
-                <div class="md-card">
-                    <h2 class="md-card-title">Simulado Trimestral - Folha de Respostas</h2>
-                    <p class="md-hint">Escolha o tipo de gabarito para imprimir</p>
-
-                    <div class="generate-options">
-                        <button id="btn-generate-blank" class="generate-btn">
-                            <span class="material-icons">description</span>
-                            <strong>Gabarito em Branco</strong>
-                            <small>Para o aluno preencher</small>
-                        </button>
-
-                        <button id="btn-generate-key" class="generate-btn">
-                            <span class="material-icons">check_circle</span>
-                            <strong>Gabarito com Chave</strong>
-                            <small>Para correção</small>
-                        </button>
-                    </div>
+            <div id="gabarito-preview" class="md-card hidden">
+                <div class="preview-toolbar">
+                    <button id="btn-copy" class="md-btn md-btn-outline">
+                        <span class="material-icons">content_copy</span>
+                        Copiar Chave
+                    </button>
+                    <button id="btn-print" class="md-btn md-btn-primary">
+                        <span class="material-icons">print</span>
+                        Imprimir
+                    </button>
                 </div>
+                <div id="gabarito-pages" class="gabarito-pages"></div>
+            </div>
 
-                <div id="gabarito-preview" class="md-card hidden">
-                    <div class="preview-toolbar">
-                        <button id="btn-copy" class="md-btn md-btn-outline">
-                            <span class="material-icons">content_copy</span>
-                            Copiar Chave
-                        </button>
-                        <button id="btn-print" class="md-btn md-btn-primary">
-                            <span class="material-icons">print</span>
-                            Imprimir
-                        </button>
-                    </div>
-                    <div id="gabarito-pages" class="gabarito-pages"></div>
-                </div>
-
-                <div id="qr-section" class="md-card hidden">
-                    <h3 class="md-card-subtitle">QR Code para Scanner</h3>
-                    <div id="qrcode-container" class="qrcode-container"></div>
-                    <p class="qr-instructions">Escaneie para carregar o gabarito automaticamente no celular</p>
-                </div>
+            <div id="qr-section" class="md-card hidden">
+                <h3 class="md-card-subtitle">QR Code para Scanner</h3>
+                <div id="qrcode-container" class="qrcode-container"></div>
+                <p class="qr-instructions">Escaneie para carregar o gabarito automaticamente no celular</p>
             </div>
         </main>
     </div>
@@ -89,6 +76,142 @@
 
     <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
     <script src="js/config.js"></script>
-    <script src="js/generate-ui.js"></script>
+    <script>
+        let currentConfig = null;
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const generator = new GabaritoGenerator();
+
+            const btnGenerateBlank = document.getElementById('btn-generate-blank');
+            const btnGenerateKey = document.getElementById('btn-generate-key');
+            const btnCopy = document.getElementById('btn-copy');
+            const btnPrint = document.getElementById('btn-print');
+            const gabaritoPreview = document.getElementById('gabarito-preview');
+            const gabaritoPages = document.getElementById('gabarito-pages');
+            const qrSection = document.getElementById('qr-section');
+            const qrcodeContainer = document.getElementById('qrcode-container');
+
+            function showToast(message, isError = false) {
+                const toast = document.getElementById('toast');
+                toast.textContent = message;
+                toast.className = `md-toast ${isError ? 'error' : 'success'} show`;
+                setTimeout(() => toast.classList.remove('show'), 3000);
+            }
+
+            function generateQRCode(answers) {
+                if (!currentConfig) return;
+
+                qrcodeContainer.innerHTML = '';
+
+                const qrData = generator.generateQRData(answers, {
+                    questions: currentConfig.numQuestions,
+                    alternatives: currentConfig.numAlternatives,
+                    leftColumn: currentConfig.leftColumn,
+                    rightColumn: currentConfig.rightColumn
+                });
+
+                QRCode.toCanvas(qrData, {
+                    width: 200,
+                    margin: 2
+                }, (error, canvas) => {
+                    if (error) return;
+                    qrcodeContainer.appendChild(canvas);
+                });
+            }
+
+            btnGenerateBlank.addEventListener('click', () => {
+                if (!currentConfig) {
+                    showToast('Configure o gabarito primeiro!', true);
+                    return;
+                }
+
+                const configData = {
+                    numQuestions: currentConfig.numQuestions,
+                    numAlternatives: currentConfig.numAlternatives,
+                    leftColumn: currentConfig.leftColumn,
+                    rightColumn: currentConfig.rightColumn,
+                    schoolName: currentConfig.schoolName || '',
+                    logoUrl: currentConfig.logoUrl || '',
+                    answers: ''
+                };
+
+                const pagesHTML = generator.createGabaritoHTML(configData, null);
+                gabaritoPages.innerHTML = pagesHTML;
+                gabaritoPreview.classList.remove('hidden');
+                qrSection.classList.remove('hidden');
+                generateQRCode('');
+                btnCopy.classList.add('hidden');
+                gabaritoPreview.scrollIntoView({ behavior: 'smooth' });
+                showToast('Gabarito em branco gerado!');
+            });
+
+            btnGenerateKey.addEventListener('click', () => {
+                if (!currentConfig) {
+                    showToast('Configure o gabarito primeiro!', true);
+                    return;
+                }
+
+                if (!currentConfig.correctAnswers) {
+                    showToast('Crie o gabarito primeiro em Config!', true);
+                    return;
+                }
+
+                const configData = {
+                    numQuestions: currentConfig.numQuestions,
+                    numAlternatives: currentConfig.numAlternatives,
+                    leftColumn: currentConfig.leftColumn,
+                    rightColumn: currentConfig.rightColumn,
+                    schoolName: currentConfig.schoolName || '',
+                    logoUrl: currentConfig.logoUrl || '',
+                    answers: currentConfig.correctAnswers
+                };
+
+                const pagesHTML = generator.createGabaritoHTML(configData, currentConfig.correctAnswers);
+                gabaritoPages.innerHTML = pagesHTML;
+                gabaritoPreview.classList.remove('hidden');
+                qrSection.classList.remove('hidden');
+                generateQRCode(currentConfig.correctAnswers);
+                btnCopy.classList.remove('hidden');
+                gabaritoPreview.scrollIntoView({ behavior: 'smooth' });
+                showToast('Gabarito com chave gerado!');
+            });
+
+            btnCopy.addEventListener('click', () => {
+                if (!currentConfig || !currentConfig.correctAnswers) {
+                    showToast('Sem gabarito para copiar', true);
+                    return;
+                }
+
+                const dataToCopy = JSON.stringify({
+                    answers: currentConfig.correctAnswers,
+                    questions: currentConfig.numQuestions,
+                    alternatives: currentConfig.numAlternatives,
+                    leftColumn: currentConfig.leftColumn,
+                    rightColumn: currentConfig.rightColumn
+                });
+
+                navigator.clipboard.writeText(dataToCopy).then(() => {
+                    showToast('Chave copiada!');
+                }).catch(() => {
+                    showToast('Erro ao copiar', true);
+                });
+            });
+
+            btnPrint.addEventListener('click', () => {
+                window.print();
+            });
+
+            // Carregar config do Firebase/LocalStorage
+            try {
+                const stored = localStorage.getItem('legab_config');
+                if (stored) {
+                    currentConfig = JSON.parse(stored);
+                    console.log('Config carregada:', currentConfig);
+                }
+            } catch (e) {
+                console.error('Erro ao carregar config:', e);
+            }
+        });
+    </script>
 </body>
 </html>
