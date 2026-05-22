@@ -442,11 +442,48 @@ body {
 }
 
 .scanner-frame {
-    width: 80%;
-    height: 80%;
-    border: 3px solid var(--primary);
-    border-radius: 12px;
+    width: 90%;
+    height: 95%;
+    border: 4px solid var(--primary);
+    border-radius: 16px;
     background: transparent;
+    position: relative;
+}
+
+.scanner-frame::before {
+    content: 'Alinhe o gabarito aqui';
+    position: absolute;
+    bottom: -30px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: white;
+    font-size: 0.85rem;
+    white-space: nowrap;
+}
+
+.scanner-grid {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+}
+
+.scanner-grid-h {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: rgba(255,255,255,0.3);
+}
+
+.scanner-grid-v {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: rgba(255,255,255,0.3);
 }
 
 .scanner-controls {
