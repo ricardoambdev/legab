@@ -5,235 +5,126 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>LeGab - Configurações</title>
     <link rel="manifest" href="manifest.json">
-    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="css/material.css">
 </head>
 <body>
     <div class="app-container">
-        <header class="app-header">
-            <h1 class="logo">LeGab</h1>
-            <nav class="app-nav">
-                <a href="index.html" class="nav-link">Scanner</a>
-                <a href="generate.html" class="nav-link">Gerar Gabarito</a>
-                <a href="config.html" class="nav-link active">Configurações</a>
+        <header class="md-header">
+            <h1 class="md-title">LeGab</h1>
+            <nav class="md-nav">
+                <a href="index.html" class="md-nav-item">
+                    <span class="material-icons">qr_code_scanner</span>
+                    <span>Scanner</span>
+                </a>
+                <a href="generate.html" class="md-nav-item">
+                    <span class="material-icons">add_box</span>
+                    <span>Gerar</span>
+                </a>
+                <a href="config.html" class="md-nav-item active">
+                    <span class="material-icons">settings</span>
+                    <span>Config</span>
+                </a>
             </nav>
         </header>
 
-        <main class="app-main">
-            <div class="section">
-                <h2>Configurações</h2>
+        <main class="md-main">
+            <div class="md-card">
+                <h2 class="md-card-title">Configurações</h2>
 
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="num-questions">Total de Questões</label>
-                        <input type="number" id="num-questions" min="1" max="200" value="65">
-                    </div>
-
-                    <div class="form-group">
-                        <label for="num-alternatives">Alternativas</label>
-                        <select id="num-alternatives">
-                            <option value="3">3 (A, B, C)</option>
-                            <option value="4">4 (A, B, C, D)</option>
-                            <option value="5" selected>5 (A, B, C, D, E)</option>
-                        </select>
-                    </div>
+                <div class="md-field">
+                    <label>Total de Questões</label>
+                    <input type="number" id="num-questions" class="md-input" min="1" max="200" value="65">
                 </div>
 
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="left-column">Coluna Esquerda</label>
-                        <input type="number" id="left-column" min="1" max="100" value="33">
-                    </div>
+                <div class="md-field">
+                    <label>Alternativas por Questão</label>
+                    <select id="num-alternatives" class="md-select">
+                        <option value="3">3 (A, B, C)</option>
+                        <option value="4">4 (A, B, C, D)</option>
+                        <option value="5" selected>5 (A, B, C, D, E)</option>
+                    </select>
+                </div>
 
-                    <div class="form-group">
-                        <label for="right-column">Coluna Direita</label>
-                        <input type="number" id="right-column" min="1" max="100" value="32">
+                <div class="md-row">
+                    <div class="md-field">
+                        <label>Coluna Esquerda</label>
+                        <input type="number" id="left-column" class="md-input" min="1" max="100" value="33">
+                    </div>
+                    <div class="md-field">
+                        <label>Coluna Direita</label>
+                        <input type="number" id="right-column" class="md-input" min="1" max="100" value="32">
                     </div>
                 </div>
 
-                <div class="form-group">
-                    <label for="passing-score">Nota de aprovação (%)</label>
-                    <input type="number" id="passing-score" min="0" max="100" value="60">
-                </div>
-
-                <div class="form-group">
-                    <label for="correct-answers">Gabarito Correto (vazio para gerar aleatório)</label>
-                    <input type="text" id="correct-answers" placeholder="Ex: ABCDEDBACD..." maxlength="200">
-                </div>
-
-                <button id="btn-save-config" class="btn btn-primary">Salvar Configurações</button>
-                <button id="btn-load-config" class="btn btn-secondary">Carregar Configurações</button>
-            </div>
-
-            <div class="section">
-                <div class="config-status">
-                    <p id="config-status">Status: Conectando...</p>
-                    <p id="last-updated"></p>
+                <div class="md-field">
+                    <label>Nota de Aprovação (%)</label>
+                    <input type="number" id="passing-score" class="md-input" min="0" max="100" value="60">
                 </div>
             </div>
 
-            <div class="section">
-                <h3>Configurações Atuais</h3>
-                <div id="current-config" class="current-config">
+            <div class="md-card">
+                <h2 class="md-card-title">Criar Gabarito</h2>
+                <p class="md-hint">Clique nas alternativas para criar o gabarito</p>
+
+                <div class="answer-builder">
+                    <div class="answer-header">
+                        <span class="answer-num">Q</span>
+                        <div class="answer-alts" id="alt-labels"></div>
+                    </div>
+                    <div id="answer-rows" class="answer-rows"></div>
+                </div>
+
+                <div class="md-field" style="margin-top: 16px;">
+                    <label>Gabarito Gerado</label>
+                    <div class="gabarito-preview">
+                        <input type="text" id="correct-answers" class="md-input gabarito-input" readonly>
+                        <span id="answers-counter" class="md-counter">0/65</span>
+                    </div>
+                </div>
+
+                <div class="md-actions">
+                    <button id="btn-clear" class="md-btn md-btn-outline">
+                        <span class="material-icons">clear</span>
+                        Limpar
+                    </button>
+                    <button id="btn-random" class="md-btn md-btn-outline">
+                        <span class="material-icons">shuffle</span>
+                        Aleatório
+                    </button>
+                </div>
+            </div>
+
+            <div class="md-card">
+                <div class="md-actions">
+                    <button id="btn-save-config" class="md-btn md-btn-primary">
+                        <span class="material-icons">save</span>
+                        Salvar
+                    </button>
+                    <button id="btn-load-config" class="md-btn md-btn-secondary">
+                        <span class="material-icons">cloud_download</span>
+                        Carregar
+                    </button>
+                </div>
+                <p id="config-status" class="config-status">Status: Conectando...</p>
+            </div>
+
+            <div class="md-card">
+                <h3 class="md-card-subtitle">Configuração Atual</h3>
+                <div id="current-config" class="config-info">
                     <p>Questões: <strong id="display-questions">-</strong></p>
                     <p>Alternativas: <strong id="display-alternatives">-</strong></p>
-                    <p>Coluna Esquerda: <strong id="display-left">-</strong></p>
-                    <p>Coluna Direita: <strong id="display-right">-</strong></p>
-                    <p>Nota aprovação: <strong id="display-passing">-</strong>%</p>
-                    <p>Gabarito: <strong id="display-gabarito">-</strong></p>
+                    <p>Colunas: <strong id="display-columns">-</strong></p>
+                    <p>Aprovação: <strong id="display-passing">-</strong>%</p>
                 </div>
             </div>
         </main>
     </div>
 
-    <div id="toast" class="toast hidden"></div>
+    <div id="toast" class="md-toast"></div>
 
     <script src="js/config.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', async () => {
-            const configManager = new ConfigManager();
-
-            const numQuestionsInput = document.getElementById('num-questions');
-            const numAlternativesSelect = document.getElementById('num-alternatives');
-            const leftColumnInput = document.getElementById('left-column');
-            const rightColumnInput = document.getElementById('right-column');
-            const passingScoreInput = document.getElementById('passing-score');
-            const correctAnswersInput = document.getElementById('correct-answers');
-            const btnSave = document.getElementById('btn-save-config');
-            const btnLoad = document.getElementById('btn-load-config');
-            const statusEl = document.getElementById('config-status');
-
-            const displayQuestions = document.getElementById('display-questions');
-            const displayAlternatives = document.getElementById('display-alternatives');
-            const displayLeft = document.getElementById('display-left');
-            const displayRight = document.getElementById('display-right');
-            const displayPassing = document.getElementById('display-passing');
-            const displayGabarito = document.getElementById('display-gabarito');
-
-            function showToast(message, isError = false) {
-                const toast = document.getElementById('toast');
-                toast.textContent = message;
-                toast.className = `toast ${isError ? 'error' : 'success'}`;
-                toast.classList.remove('hidden');
-                setTimeout(() => toast.classList.add('hidden'), 3000);
-            }
-
-            async function updateDisplay() {
-                const config = await configManager.getConfig();
-                if (config) {
-                    displayQuestions.textContent = config.numQuestions;
-                    displayAlternatives.textContent = config.numAlternatives;
-                    displayLeft.textContent = config.leftColumn;
-                    displayRight.textContent = config.rightColumn;
-                    displayPassing.textContent = config.passingScore;
-                    displayGabarito.textContent = config.correctAnswers || '(aleatório)';
-                    numQuestionsInput.value = config.numQuestions;
-                    numAlternativesSelect.value = config.numAlternatives || 5;
-                    leftColumnInput.value = config.leftColumn || 33;
-                    rightColumnInput.value = config.rightColumn || 32;
-                    passingScoreInput.value = config.passingScore;
-                    if (config.correctAnswers) {
-                        correctAnswersInput.value = config.correctAnswers;
-                    }
-                }
-            }
-
-            btnSave.addEventListener('click', async () => {
-                const numQuestions = parseInt(numQuestionsInput.value);
-                const numAlternatives = parseInt(numAlternativesSelect.value);
-                const leftColumn = parseInt(leftColumnInput.value);
-                const rightColumn = parseInt(rightColumnInput.value);
-                const passingScore = parseInt(passingScoreInput.value);
-                let correctAnswers = correctAnswersInput.value.toUpperCase().trim();
-
-                if (numQuestions < 1 || numQuestions > 200) {
-                    showToast('Número de questões deve ser entre 1 e 200', true);
-                    return;
-                }
-
-                if (leftColumn < 1 || leftColumn > 100) {
-                    showToast('Coluna esquerda deve ser entre 1 e 100', true);
-                    return;
-                }
-
-                if (rightColumn < 1 || rightColumn > 100) {
-                    showToast('Coluna direita deve ser entre 1 e 100', true);
-                    return;
-                }
-
-                if (leftColumn + rightColumn !== numQuestions) {
-                    showToast(`Total de questões (${numQuestions}) deve ser igual a soma das colunas (${leftColumn} + ${rightColumn})`, true);
-                    return;
-                }
-
-                if (!correctAnswers) {
-                    const options = 'ABCDE'.substring(0, numAlternatives);
-                    correctAnswers = '';
-                    for (let i = 0; i < numQuestions; i++) {
-                        correctAnswers += options[Math.floor(Math.random() * options.length)];
-                    }
-                }
-
-                if (correctAnswers.length !== numQuestions) {
-                    showToast(`Gabarito deve ter ${numQuestions} caracteres`, true);
-                    return;
-                }
-
-                const config = {
-                    numQuestions,
-                    numAlternatives,
-                    leftColumn,
-                    rightColumn,
-                    passingScore,
-                    correctAnswers,
-                    updatedAt: new Date().toISOString()
-                };
-
-                try {
-                    await configManager.saveConfig(config);
-                    showToast('Configurações salvas!');
-                    updateDisplay();
-                } catch (error) {
-                    showToast('Erro: ' + error.message, true);
-                }
-            });
-
-            btnLoad.addEventListener('click', async () => {
-                try {
-                    const config = await configManager.getConfig();
-                    if (config) {
-                        showToast('Configurações carregadas!');
-                        updateDisplay();
-                    } else {
-                        showToast('Nenhuma configuração encontrada', true);
-                    }
-                } catch (error) {
-                    showToast('Erro: ' + error.message, true);
-                }
-            });
-
-            configManager.onReady(() => {
-                statusEl.textContent = 'Status: Conectado';
-                updateDisplay();
-            });
-
-            configManager.onError((error) => {
-                statusEl.textContent = 'Status: Usando LocalStorage';
-            });
-
-            await updateDisplay();
-        });
-    </script>
-
-    <style>
-        .form-row {
-            display: flex;
-            gap: 15px;
-            margin-bottom: 15px;
-        }
-        .form-row .form-group {
-            flex: 1;
-            margin-bottom: 0;
-        }
-    </style>
+    <script src="js/config-ui.js"></script>
 </body>
 </html>

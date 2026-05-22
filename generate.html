@@ -5,33 +5,43 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>LeGab - Gerar Gabarito</title>
     <link rel="manifest" href="manifest.json">
-    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="css/material.css">
     <link rel="stylesheet" href="css/gabarito.css">
 </head>
 <body>
     <div class="app-container">
-        <header class="app-header">
-            <h1 class="logo">LeGab</h1>
-            <nav class="app-nav">
-                <a href="index.html" class="nav-link">Scanner</a>
-                <a href="generate.html" class="nav-link active">Gerar Gabarito</a>
-                <a href="config.html" class="nav-link">Configurações</a>
+        <header class="md-header">
+            <h1 class="md-title">LeGab</h1>
+            <nav class="md-nav">
+                <a href="index.html" class="md-nav-item">
+                    <span class="material-icons">qr_code_scanner</span>
+                    <span>Scanner</span>
+                </a>
+                <a href="generate.html" class="md-nav-item active">
+                    <span class="material-icons">add_box</span>
+                    <span>Gerar</span>
+                </a>
+                <a href="config.html" class="md-nav-item">
+                    <span class="material-icons">settings</span>
+                    <span>Config</span>
+                </a>
             </nav>
         </header>
 
-        <main class="app-main">
-            <div class="section">
-                <h2>Gerar Gabarito</h2>
+        <main class="md-main">
+            <div class="md-card">
+                <h2 class="md-card-title">Configurações do Gabarito</h2>
 
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="gen-questions">Total Questões</label>
-                        <input type="number" id="gen-questions" min="1" max="200" value="65">
+                <div class="md-row">
+                    <div class="md-field">
+                        <label>Total Questões</label>
+                        <input type="number" id="gen-questions" class="md-input" min="1" max="200" value="65">
                     </div>
-
-                    <div class="form-group">
-                        <label for="gen-alternatives">Alternativas</label>
-                        <select id="gen-alternatives">
+                    <div class="md-field">
+                        <label>Alternativas</label>
+                        <select id="gen-alternatives" class="md-select">
                             <option value="3">3 (A, B, C)</option>
                             <option value="4">4 (A, B, C, D)</option>
                             <option value="5" selected>5 (A, B, C, D, E)</option>
@@ -39,66 +49,93 @@
                     </div>
                 </div>
 
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="gen-left">Coluna Esquerda</label>
-                        <input type="number" id="gen-left" min="1" max="100" value="33">
+                <div class="md-row">
+                    <div class="md-field">
+                        <label>Coluna Esquerda</label>
+                        <input type="number" id="gen-left" class="md-input" min="1" max="100" value="33">
                     </div>
-
-                    <div class="form-group">
-                        <label for="gen-right">Coluna Direita</label>
-                        <input type="number" id="gen-right" min="1" max="100" value="32">
+                    <div class="md-field">
+                        <label>Coluna Direita</label>
+                        <input type="number" id="gen-right" class="md-input" min="1" max="100" value="32">
                     </div>
                 </div>
 
-                <div class="form-group">
-                    <label for="gen-answers">Gabarito Correto (opcional)</label>
-                    <input type="text" id="gen-answers" placeholder="Deixe vazio para gabarito em branco" maxlength="200">
-                    <small style="color: #666; font-size: 12px;">Se vazio, gera gabarito em branco para impressão</small>
+                <div class="md-actions" style="margin-top: 16px;">
+                    <button id="btn-load-config" class="md-btn md-btn-outline">
+                        <span class="material-icons">cloud_download</span>
+                        Carregar Config
+                    </button>
                 </div>
-
-                <button id="btn-generate" class="btn btn-primary">Gerar Gabarito</button>
-                <button id="btn-load-config" class="btn btn-secondary">Carregar Config</button>
             </div>
 
-            <div id="gabarito-preview" class="section hidden">
-                <h3>Preview do Gabarito</h3>
-                <div class="preview-controls">
-                    <button id="btn-copy-key" class="btn btn-secondary">Copiar Chave</button>
-                    <button id="btn-show-key" class="btn btn-secondary">Mostrar Chave</button>
-                    <button id="btn-print" class="btn btn-primary">Imprimir</button>
+            <div class="md-card">
+                <h2 class="md-card-title">Criar Gabarito</h2>
+                <p class="md-hint">Clique nas alternativas para criar as respostas</p>
+
+                <div class="answer-builder">
+                    <div class="answer-header">
+                        <span class="answer-num">Q</span>
+                        <div class="answer-alts" id="alt-labels"></div>
+                    </div>
+                    <div id="answer-rows" class="answer-rows"></div>
+                </div>
+
+                <div class="md-field" style="margin-top: 16px;">
+                    <label>Gabarito</label>
+                    <div class="gabarito-preview">
+                        <input type="text" id="gen-answers" class="md-input gabarito-input" readonly>
+                        <span id="gen-counter" class="md-counter">0/65</span>
+                    </div>
+                </div>
+
+                <div class="md-actions">
+                    <button id="btn-clear" class="md-btn md-btn-outline">
+                        <span class="material-icons">clear</span>
+                        Limpar
+                    </button>
+                    <button id="btn-random" class="md-btn md-btn-outline">
+                        <span class="material-icons">shuffle</span>
+                        Aleatório
+                    </button>
+                </div>
+            </div>
+
+            <div class="md-card">
+                <button id="btn-generate" class="md-btn md-btn-primary" style="width: 100%;">
+                    <span class="material-icons">print</span>
+                    Gerar Gabarito para Impressão
+                </button>
+            </div>
+
+            <div id="gabarito-preview" class="md-card hidden">
+                <div class="preview-toolbar">
+                    <button id="btn-copy" class="md-btn md-btn-outline">
+                        <span class="material-icons">content_copy</span>
+                        Copiar
+                    </button>
+                    <button id="btn-show-key" class="md-btn md-btn-outline">
+                        <span class="material-icons">visibility</span>
+                        Ver Chave
+                    </button>
+                    <button id="btn-print" class="md-btn md-btn-primary">
+                        <span class="material-icons">print</span>
+                        Imprimir
+                    </button>
                 </div>
                 <div id="gabarito-pages" class="gabarito-pages"></div>
             </div>
 
-            <div class="section">
-                <h3>QR Code com Chave</h3>
-                <div id="qrcode-container" class="qrcode-container">
-                    <p style="color: #666; text-align: center;">Gere um gabarito com respostas para gerar o QR Code</p>
-                </div>
-                <p class="qr-instructions">
-                    Escaneie este QR Code com o aplicativo para carregar o gabarito automaticamente.
-                </p>
+            <div id="qr-section" class="md-card hidden">
+                <h3 class="md-card-subtitle">QR Code</h3>
+                <div id="qrcode-container" class="qrcode-container"></div>
             </div>
         </main>
     </div>
 
-    <div id="toast" class="toast hidden"></div>
+    <div id="toast" class="md-toast"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
     <script src="js/config.js"></script>
-    <script src="js/generator.js"></script>
-
-    <style>
-        .form-row {
-            display: flex;
-            gap: 15px;
-            margin-bottom: 15px;
-        }
-        .form-row .form-group {
-            flex: 1;
-            margin-bottom: 0;
-        }
-    </style>
+    <script src="js/generate-ui.js"></script>
 </body>
 </html>

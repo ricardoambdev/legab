@@ -170,12 +170,31 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const genQuestionsInput = document.getElementById('gen-questions');
     const genAlternativesSelect = document.getElementById('gen-alternatives');
+    const genLeftInput = document.getElementById('gen-left');
+    const genRightInput = document.getElementById('gen-right');
     const genAnswersInput = document.getElementById('gen-answers');
+    const genAnswersCounter = document.getElementById('gen-answers-counter');
     const btnGenerate = document.getElementById('btn-generate');
     const btnCopyKey = document.getElementById('btn-copy-key');
     const btnPrint = document.getElementById('btn-print');
     const btnShowKey = document.getElementById('btn-show-key');
     const btnLoadConfig = document.getElementById('btn-load-config');
+
+    function updateGenAnswersCounter() {
+        const total = parseInt(genQuestionsInput.value) || 65;
+        const current = genAnswersInput.value.length;
+        genAnswersCounter.textContent = `${current}/${total}`;
+        if (current > 0 && current !== total) {
+            genAnswersCounter.classList.add('error');
+        } else {
+            genAnswersCounter.classList.remove('error');
+        }
+    }
+
+    genQuestionsInput.addEventListener('input', updateGenAnswersCounter);
+    genAnswersInput.addEventListener('input', updateGenAnswersCounter);
+    genLeftInput.addEventListener('input', updateGenAnswersCounter);
+    genRightInput.addEventListener('input', updateGenAnswersCounter);
 
     const gabaritoResult = document.getElementById('gabarito-preview');
     const gabaritoPages = document.getElementById('gabarito-pages');
@@ -193,6 +212,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             genAlternativesSelect.value = config.numAlternatives || 5;
             document.getElementById('gen-left').value = config.leftColumn || 33;
             document.getElementById('gen-right').value = config.rightColumn || 32;
+            updateGenAnswersCounter();
         } else {
             currentConfig = {
                 numQuestions: 65,

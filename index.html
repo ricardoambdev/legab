@@ -5,49 +5,78 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>LeGab - Scanner</title>
     <link rel="manifest" href="manifest.json">
-    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="css/material.css">
 </head>
 <body>
     <div class="app-container">
-        <header class="app-header">
-            <h1 class="logo">LeGab</h1>
-            <nav class="app-nav">
-                <a href="index.html" class="nav-link active">Scanner</a>
-                <a href="generate.html" class="nav-link">Gerar Gabarito</a>
-                <a href="config.html" class="nav-link">Configurações</a>
+        <header class="md-header">
+            <h1 class="md-title">LeGab</h1>
+            <nav class="md-nav">
+                <a href="index.html" class="md-nav-item active">
+                    <span class="material-icons">qr_code_scanner</span>
+                    <span>Scanner</span>
+                </a>
+                <a href="generate.html" class="md-nav-item">
+                    <span class="material-icons">add_box</span>
+                    <span>Gerar</span>
+                </a>
+                <a href="config.html" class="md-nav-item">
+                    <span class="material-icons">settings</span>
+                    <span>Config</span>
+                </a>
             </nav>
         </header>
 
-        <main class="app-main">
-            <div class="section">
-                <h2>Escanear Gabarito</h2>
-                <div id="video-container" class="video-container">
-                    <video id="video" autoplay playsinline></video>
-                    <canvas id="canvas"></canvas>
-                    <div id="overlay" class="scan-overlay">
-                        <div class="scan-frame"></div>
-                        <p>Alinhe o gabarito dentro do quadro</p>
+        <main class="md-main">
+            <div class="md-card">
+                <h2 class="md-card-title">Escanear Gabarito</h2>
+
+                <div class="scanner-container">
+                    <video id="video" class="scanner-video" autoplay playsinline></video>
+                    <canvas id="canvas" class="scanner-canvas"></canvas>
+                    <div id="scanner-overlay" class="scanner-overlay">
+                        <div class="scanner-frame"></div>
                     </div>
                 </div>
-                <div class="scanner-buttons">
-                    <button id="btn-start" class="btn btn-primary">Iniciar Câmera</button>
-                    <button id="btn-capture" class="btn btn-secondary hidden">Capturar Imagem</button>
-                    <button id="btn-stop" class="btn btn-secondary hidden">Parar</button>
+
+                <div class="scanner-controls">
+                    <button id="btn-start" class="md-btn md-btn-primary">
+                        <span class="material-icons">camera_alt</span>
+                        Iniciar Câmera
+                    </button>
+                    <button id="btn-capture" class="md-btn md-btn-primary hidden">
+                        <span class="material-icons">photo_camera</span>
+                        Capturar
+                    </button>
+                    <button id="btn-stop" class="md-btn md-btn-outline hidden">
+                        <span class="material-icons">stop</span>
+                        Parar
+                    </button>
                 </div>
             </div>
 
-            <div class="section hidden" id="manual-section">
-                <h3>Ou digite as respostas</h3>
-                <div class="input-group">
-                    <label for="manual-answers">Respostas (ex: ABCDED...)</label>
-                    <input type="text" id="manual-answers" placeholder="Digite as respostas..." maxlength="60">
-                    <button id="btn-check-manual" class="btn btn-primary">Verificar</button>
-                </div>
+            <div id="debug-section" class="md-card hidden">
+                <h3 class="md-card-subtitle">Debug</h3>
+                <div id="debug-log" class="debug-log"></div>
             </div>
 
-            <div id="result-section" class="section hidden">
+            <div class="md-card">
+                <h3 class="md-card-title">Ou digite as respostas</h3>
+                <div class="md-field">
+                    <label>Respostas (ex: ABCDED...)</label>
+                    <input type="text" id="manual-answers" class="md-input" placeholder="Digite as respostas..." maxlength="65">
+                </div>
+                <button id="btn-check" class="md-btn md-btn-primary" style="width: 100%;">
+                    <span class="material-icons">check</span>
+                    Verificar
+                </button>
+            </div>
+
+            <div id="result-section" class="md-card hidden">
                 <div class="result-card">
-                    <h3>Resultado</h3>
+                    <h2 class="result-title">Resultado</h2>
                     <div class="result-stats">
                         <div class="stat correct">
                             <span class="stat-value" id="correct-count">0</span>
@@ -61,10 +90,6 @@
                             <span class="stat-value" id="blank-count">0</span>
                             <span class="stat-label">Brancas</span>
                         </div>
-                        <div class="stat total">
-                            <span class="stat-value" id="total-questions">0</span>
-                            <span class="stat-label">Total</span>
-                        </div>
                     </div>
                     <div class="result-score">
                         <span class="score-value" id="score-percent">0%</span>
@@ -73,32 +98,25 @@
                 </div>
             </div>
 
-            <div id="loading-section" class="section hidden">
+            <div id="loading-section" class="md-card hidden">
                 <div class="loading">
-                    <div class="spinner"></div>
-                    <p>Processando imagem...</p>
-                    <p id="loading-status">Iniciando OCR...</p>
+                    <div class="md-spinner"></div>
+                    <p id="loading-status">Processando...</p>
                 </div>
             </div>
 
-            <div id="debug-section" class="section hidden">
-                <h3>Debug</h3>
-                <div id="debug-log" class="debug-log"></div>
-            </div>
-
-            <div class="section">
-                <p class="info-text">
-                    Questões: <strong id="config-questions">-</strong> |
-                    Alternativas: <strong id="config-alternatives">-</strong>
-                </p>
+            <div class="md-card config-mini">
+                <p>Questões: <strong id="config-questions">-</strong> |
+                   Alternativas: <strong id="config-alternatives">-</strong></p>
+                <div id="debug-status" class="debug-status"></div>
             </div>
         </main>
     </div>
 
-    <div id="toast" class="toast hidden"></div>
+    <div id="toast" class="md-toast"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <script src="js/config.js"></script>
-    <script src="js/scanner.js"></script>
+    <script src="js/scanner-ui.js"></script>
 </body>
 </html>

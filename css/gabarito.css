@@ -1,27 +1,27 @@
 .gabarito-page {
     background: white;
-    padding: 10px 15px;
-    margin-bottom: 10px;
-    border: 1px solid #ccc;
+    padding: 15px;
+    margin-bottom: 15px;
+    border: 1px solid var(--divider);
     page-break-after: always;
 }
 
 .gabarito-header {
     text-align: center;
-    margin-bottom: 10px;
-    border-bottom: 2px solid #333;
+    margin-bottom: 12px;
+    border-bottom: 2px solid var(--primary);
     padding-bottom: 8px;
 }
 
 .gabarito-header h1 {
-    color: #4CAF50;
-    margin-bottom: 3px;
+    color: var(--primary);
+    margin-bottom: 4px;
     font-size: 1.2rem;
 }
 
 .gabarito-header p {
     font-size: 0.8rem;
-    color: #666;
+    color: var(--text-secondary);
     margin: 0;
 }
 
@@ -30,33 +30,29 @@
     justify-content: center;
     align-items: flex-start;
     gap: 20px;
-    margin-top: 10px;
+    margin-top: 8px;
 }
 
 .key-group {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 3px;
+    gap: 2px;
 }
 
 .key-label {
-    font-size: 0.7rem;
-    color: #666;
+    font-size: 0.65rem;
+    color: var(--text-secondary);
 }
 
 .gabarito-key {
-    font-family: 'Courier New', monospace;
-    background: #f0f0f0;
+    font-family: 'Roboto Mono', monospace;
+    background: var(--primary-light);
     padding: 4px 10px;
     letter-spacing: 2px;
-    font-size: 0.85rem;
-    border: 1px solid #ccc;
-}
-
-.key-separator {
-    font-weight: bold;
-    color: #999;
+    font-size: 0.8rem;
+    border: 1px solid var(--primary);
+    color: var(--primary-dark);
 }
 
 .gabarito-table {
@@ -67,60 +63,59 @@
 
 .gabarito-table th,
 .gabarito-table td {
-    border: 1px solid #333;
+    border: 1px solid var(--divider);
     padding: 3px;
     text-align: center;
 }
 
 .gabarito-table th {
-    background: #4CAF50;
+    background: var(--primary);
     color: white;
-    font-weight: bold;
-    padding: 3px;
+    font-weight: 500;
 }
 
 .gabarito-table .question-num {
-    background: #f5f5f5;
-    font-weight: bold;
-    width: 30px;
+    background: var(--primary-light);
+    font-weight: 500;
+    width: 28px;
     font-size: 0.7rem;
 }
 
 .gabarito-table .alt-header {
-    width: 28px;
+    width: 26px;
     font-size: 0.65rem;
 }
 
 .gabarito-table .col-divider {
-    width: 10px;
-    background: #ddd;
+    width: 8px;
+    background: var(--divider);
     border: none;
 }
 
 .bubble-cell {
-    width: 28px;
-    height: 28px;
+    width: 26px;
+    height: 26px;
     padding: 1px !important;
 }
 
 .bubble {
     width: 22px;
     height: 22px;
-    border: 1.5px solid #333;
+    border: 1.5px solid var(--text-primary);
     border-radius: 50%;
     margin: 0 auto;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-weight: bold;
+    font-weight: 500;
     font-size: 0.65rem;
     background: white;
-    color: #333;
+    color: var(--text-primary);
 }
 
 .bubble.correct {
-    background: #4CAF50;
-    border-color: #388E3C;
+    background: var(--primary);
+    border-color: var(--primary-dark);
     color: white;
 }
 
@@ -129,30 +124,22 @@
 }
 
 .gabarito-footer {
-    margin-top: 10px;
+    margin-top: 12px;
     text-align: center;
     padding-top: 8px;
-    border-top: 1px solid #ccc;
+    border-top: 1px solid var(--divider);
 }
 
 .gabarito-footer p {
-    font-size: 11px;
-    color: #333;
+    font-size: 10px;
+    color: var(--text-secondary);
     margin: 0;
-}
-
-.footer-date {
-    font-size: 9px !important;
-    color: #666 !important;
-    margin-top: 2px !important;
 }
 
 @media print {
     html, body {
         margin: 0;
         padding: 0;
-        width: 210mm;
-        height: 297mm;
     }
     body * {
         visibility: hidden;
@@ -169,11 +156,11 @@
     .gabarito-page {
         border: none;
         margin: 0;
-        padding: 8px 10px;
+        padding: 10px;
         page-break-after: always;
         width: 100%;
     }
-    .preview-controls, .no-print {
+    .preview-toolbar, .no-print {
         display: none !important;
     }
 }
