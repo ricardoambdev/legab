@@ -65,45 +65,32 @@
                             <small>Alternativas</small>
                         </div>
                     </div>
-                </div>
-
-                <div class="md-card">
-                    <h2 class="md-card-title">Criar Gabarito</h2>
-                    <p class="md-hint">Clique nas alternativas para criar as respostas</p>
-
-                    <div class="answer-builder">
-                        <div class="answer-header">
-                            <span class="answer-num">Q</span>
-                            <div class="answer-alts" id="alt-labels"></div>
+                    <div class="config-item">
+                        <span class="material-icons">business</span>
+                        <div>
+                            <strong id="summary-school">-</strong>
+                            <small>Escola</small>
                         </div>
-                        <div id="answer-rows" class="answer-rows"></div>
-                    </div>
-
-                    <div class="md-field" style="margin-top: 16px;">
-                        <label>Gabarito</label>
-                        <div class="gabarito-preview">
-                            <input type="text" id="gen-answers" class="md-input gabarito-input" readonly>
-                            <span id="gen-counter" class="md-counter">0/65</span>
-                        </div>
-                    </div>
-
-                    <div class="md-actions">
-                        <button id="btn-clear" class="md-btn md-btn-outline">
-                            <span class="material-icons">clear</span>
-                            Limpar
-                        </button>
-                        <button id="btn-random" class="md-btn md-btn-outline">
-                            <span class="material-icons">shuffle</span>
-                            Aleatório
-                        </button>
                     </div>
                 </div>
 
                 <div class="md-card">
-                    <button id="btn-generate" class="md-btn md-btn-primary" style="width: 100%;">
-                        <span class="material-icons">print</span>
-                        Gerar Gabarito para Impressão
-                    </button>
+                    <h2 class="md-card-title">Gerar Gabarito</h2>
+                    <p class="md-hint">Escolha o tipo de gabarito para impressão</p>
+
+                    <div class="generate-options">
+                        <button id="btn-generate-blank" class="generate-btn">
+                            <span class="material-icons">description</span>
+                            <strong>Gabarito em Branco</strong>
+                            <small>Para o aluno preencher</small>
+                        </button>
+
+                        <button id="btn-generate-key" class="generate-btn">
+                            <span class="material-icons">check_circle</span>
+                            <strong>Gabarito com Chave</strong>
+                            <small>Para correção</small>
+                        </button>
+                    </div>
                 </div>
 
                 <div id="gabarito-preview" class="md-card hidden">
@@ -111,10 +98,6 @@
                         <button id="btn-copy" class="md-btn md-btn-outline">
                             <span class="material-icons">content_copy</span>
                             Copiar
-                        </button>
-                        <button id="btn-show-key" class="md-btn md-btn-outline">
-                            <span class="material-icons">visibility</span>
-                            Ver Chave
                         </button>
                         <button id="btn-print" class="md-btn md-btn-primary">
                             <span class="material-icons">print</span>
@@ -125,8 +108,9 @@
                 </div>
 
                 <div id="qr-section" class="md-card hidden">
-                    <h3 class="md-card-subtitle">QR Code</h3>
+                    <h3 class="md-card-subtitle">QR Code para Scanner</h3>
                     <div id="qrcode-container" class="qrcode-container"></div>
+                    <p class="qr-instructions">Escaneie para carregar o gabarito automaticamente</p>
                 </div>
             </div>
         </main>

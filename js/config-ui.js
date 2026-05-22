@@ -4,7 +4,9 @@ let currentConfig = {
     numAlternatives: 5,
     leftColumn: 33,
     rightColumn: 32,
-    passingScore: 60
+    passingScore: 60,
+    schoolName: '',
+    logoUrl: ''
 };
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -15,6 +17,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     const leftColumnInput = document.getElementById('left-column');
     const rightColumnInput = document.getElementById('right-column');
     const passingScoreInput = document.getElementById('passing-score');
+    const schoolNameInput = document.getElementById('school-name');
+    const logoUrlInput = document.getElementById('logo-url');
+    const logoPreview = document.getElementById('logo-preview');
+    const logoImg = document.getElementById('logo-img');
     const correctAnswersInput = document.getElementById('correct-answers');
     const answersCounter = document.getElementById('answers-counter');
     const btnSave = document.getElementById('btn-save-config');
@@ -143,6 +149,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         currentConfig.leftColumn = parseInt(leftColumnInput.value) || 33;
         currentConfig.rightColumn = parseInt(rightColumnInput.value) || 32;
         currentConfig.passingScore = parseInt(passingScoreInput.value) || 60;
+        currentConfig.schoolName = schoolNameInput.value.trim();
+        currentConfig.logoUrl = logoUrlInput.value.trim();
     }
 
     function rebuildUI() {
@@ -164,6 +172,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         updateGabaritoInput();
         updateAnswerCounter();
     }
+
+    logoUrlInput.addEventListener('change', () => {
+        const url = logoUrlInput.value.trim();
+        if (url) {
+            logoImg.src = url;
+            logoPreview.classList.remove('hidden');
+            logoImg.onerror = () => {
+                logoPreview.classList.add('hidden');
+            };
+        } else {
+            logoPreview.classList.add('hidden');
+        }
+    });
 
     numQuestionsInput.addEventListener('change', rebuildUI);
     numAlternativesSelect.addEventListener('change', () => {
@@ -216,6 +237,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 leftColumnInput.value = config.leftColumn;
                 rightColumnInput.value = config.rightColumn;
                 passingScoreInput.value = config.passingScore;
+                schoolNameInput.value = config.schoolName || '';
+                logoUrlInput.value = config.logoUrl || '';
+
+                if (config.logoUrl) {
+                    logoImg.src = config.logoUrl;
+                    logoPreview.classList.remove('hidden');
+                }
 
                 if (config.correctAnswers) {
                     currentAnswers = config.correctAnswers.toUpperCase().split('');
@@ -223,6 +251,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     currentAnswers = new Array(config.numQuestions).fill(null);
                 }
 
+                currentConfig = { ...config };
                 rebuildUI();
                 showToast('Configuração carregada!');
                 updateDisplay();
@@ -237,6 +266,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     async function updateDisplay() {
         const config = await configManager.getConfig();
         if (config) {
+            document.getElementById('display-school').textContent = config.schoolName || '-';
             document.getElementById('display-questions').textContent = config.numQuestions;
             document.getElementById('display-alternatives').textContent = config.numAlternatives;
             document.getElementById('display-columns').textContent = `${config.leftColumn} + ${config.rightColumn}`;
@@ -263,6 +293,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         leftColumnInput.value = config.leftColumn;
         rightColumnInput.value = config.rightColumn;
         passingScoreInput.value = config.passingScore;
+        schoolNameInput.value = config.schoolName || '';
+        logoUrlInput.value = config.logoUrl || '';
+
+        if (config.logoUrl) {
+            logoImg.src = config.logoUrl;
+            logoPreview.classList.remove('hidden');
+        }
 
         if (config.correctAnswers) {
             currentAnswers = config.correctAnswers.toUpperCase().split('');
@@ -276,8 +313,3 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     updateDisplay();
 });
-
-window.selectAnswer = function(question, alt) {
-    const event = new CustomEvent('answer-select', { detail: { question, alt } });
-    document.dispatchEvent(event);
-};
