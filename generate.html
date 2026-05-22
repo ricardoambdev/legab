@@ -8,7 +8,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link rel="stylesheet" href="css/material.css">
-    <link rel="stylesheet" href="css/gabarito.css">
 </head>
 <body>
     <div class="app-container">
@@ -50,24 +49,15 @@
                 </div>
             </div>
 
-            <div id="gabarito-preview" class="md-card hidden">
-                <div class="preview-toolbar">
-                    <button id="btn-copy" class="md-btn md-btn-outline">
-                        <span class="material-icons">content_copy</span>
-                        Copiar Chave
-                    </button>
-                    <button id="btn-print" class="md-btn md-btn-primary">
-                        <span class="material-icons">print</span>
-                        Imprimir
-                    </button>
-                </div>
-                <div id="gabarito-pages" class="gabarito-pages"></div>
-            </div>
-
-            <div id="qr-section" class="md-card hidden">
-                <h3 class="md-card-subtitle">QR Code para Scanner</h3>
-                <div id="qrcode-container" class="qrcode-container"></div>
-                <p class="qr-instructions">Escaneie para carregar o gabarito automaticamente no celular</p>
+            <div id="config-info" class="md-card">
+                <p class="config-info-text">
+                    <span class="material-icons">info</span>
+                    Configure o gabarito na página de Configurações antes de gerar.
+                </p>
+                <a href="config.html" class="md-btn md-btn-primary">
+                    <span class="material-icons">settings</span>
+                    Ir para Configurações
+                </a>
             </div>
         </main>
     </div>
@@ -75,21 +65,13 @@
     <div id="toast" class="md-toast"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
-    <script src="js/config.js"></script>
     <script>
         let currentConfig = null;
 
         document.addEventListener('DOMContentLoaded', async () => {
-            const generator = new GabaritoGenerator();
-
             const btnGenerateBlank = document.getElementById('btn-generate-blank');
             const btnGenerateKey = document.getElementById('btn-generate-key');
-            const btnCopy = document.getElementById('btn-copy');
-            const btnPrint = document.getElementById('btn-print');
-            const gabaritoPreview = document.getElementById('gabarito-preview');
-            const gabaritoPages = document.getElementById('gabarito-pages');
-            const qrSection = document.getElementById('qr-section');
-            const qrcodeContainer = document.getElementById('qrcode-container');
+            const configInfo = document.getElementById('config-info');
 
             function showToast(message, isError = false) {
                 const toast = document.getElementById('toast');
@@ -98,119 +80,206 @@
                 setTimeout(() => toast.classList.remove('show'), 3000);
             }
 
-            function generateQRCode(answers) {
-                if (!currentConfig) return;
+            function loadConfig() {
+                try {
+                    const stored = localStorage.getItem('legab_config');
+                    if (stored) {
+                        currentConfig = JSON.parse(stored);
+                    }
+                } catch (e) {
+                    console.error('Erro:', e);
+                }
+            }
 
-                qrcodeContainer.innerHTML = '';
+            function openPrintWindow(answers) {
+                if (!currentConfig) {
+                    showToast('Configure o gabarito primeiro!', true);
+                    return null;
+                }
 
-                const qrData = generator.generateQRData(answers, {
-                    questions: currentConfig.numQuestions,
-                    alternatives: currentConfig.numAlternatives,
-                    leftColumn: currentConfig.leftColumn,
-                    rightColumn: currentConfig.rightColumn
-                });
+                const numQuestions = currentConfig.numQuestions || 65;
+                const numAlternatives = currentConfig.numAlternatives || 5;
+                const leftColumn = currentConfig.leftColumn || 33;
+                const rightColumn = currentConfig.rightColumn || 32;
+                const schoolName = currentConfig.schoolName || 'Simulado Trimestral';
+                const logoUrl = currentConfig.logoUrl || '';
+                const showAnswers = answers && answers.length > 0;
+                const opts = 'ABCDE'.substring(0, numAlternatives);
 
-                QRCode.toCanvas(qrData, {
-                    width: 200,
-                    margin: 2
-                }, (error, canvas) => {
-                    if (error) return;
-                    qrcodeContainer.appendChild(canvas);
-                });
+                const questionsPerPage = leftColumn + rightColumn;
+                const totalPages = Math.ceil(numQuestions / questionsPerPage);
+
+                let pagesHTML = '';
+
+                for (let page = 0; page < totalPages; page++) {
+                    const startQ = page * questionsPerPage + 1;
+                    const endQ = Math.min(startQ + questionsPerPage - 1, numQuestions);
+                    const rowsOnPage = leftColumn;
+
+                    let tableRows = '';
+                    for (let row = 0; row < rowsOnPage; row++) {
+                        const q1 = startQ + row;
+                        const q2 = startQ + row + leftColumn;
+
+                        tableRows += '<tr>';
+
+                        if (q1 >= startQ && q1 <= Math.min(startQ + leftColumn - 1, numQuestions)) {
+                            tableRows += `<td class="qnum">${q1}</td>`;
+                            for (let alt = 0; alt < numAlternatives; alt++) {
+                                const letter = opts[alt];
+                                const filled = showAnswers && answers[q1 - 1] === letter;
+                                tableRows += `<td class="bubble"><div class="bubble${filled ? ' filled' : ''}">${letter}</div></td>`;
+                            }
+                        } else {
+                            tableRows += '<td class="qnum"></td>';
+                            for (let alt = 0; alt < numAlternatives; alt++) {
+                                tableRows += '<td class="bubble"></td>';
+                            }
+                        }
+
+                        tableRows += '<td class="divider"></td>';
+
+                        if (q2 >= startQ + leftColumn && q2 <= numQuestions) {
+                            tableRows += `<td class="qnum">${q2}</td>`;
+                            for (let alt = 0; alt < numAlternatives; alt++) {
+                                const letter = opts[alt];
+                                const filled = showAnswers && answers[q2 - 1] === letter;
+                                tableRows += `<td class="bubble"><div class="bubble${filled ? ' filled' : ''}">${letter}</div></td>`;
+                            }
+                        } else {
+                            tableRows += '<td class="qnum"></td>';
+                            for (let alt = 0; alt < numAlternatives; alt++) {
+                                tableRows += '<td class="bubble"></td>';
+                            }
+                        }
+
+                        tableRows += '</tr>';
+                    }
+
+                    const headerCols = `<th class="qnum">Q</th>` +
+                        opts.split('').map(a => `<th class="alt">${a}</th>`).join('') +
+                        '<th class="divider"></th>' +
+                        `<th class="qnum">Q</th>` +
+                        opts.split('').map(a => `<th class="alt">${a}</th>`).join('');
+
+                    let logoHTML = '';
+                    if (logoUrl) {
+                        logoHTML = `<img src="${logoUrl}" alt="Logo" class="logo">`;
+                    }
+
+                    pagesHTML += `
+                        <div class="page">
+                            <div class="header">
+                                ${logoHTML}
+                                <h1>${schoolName}</h1>
+                                <h2>Simulado Trimestral - Folha de Respostas</h2>
+                            </div>
+                            <div class="fields">
+                                <div class="field">
+                                    <label>Nome do Aluno:</label>
+                                    <div class="line"></div>
+                                </div>
+                                <div class="field small">
+                                    <label>Série:</label>
+                                    <div class="line"></div>
+                                </div>
+                                <div class="field">
+                                    <label>Data:</label>
+                                    <div class="line inline">
+                                        <span>__</span>/<span>__</span>/<span>____</span>
+                                    </div>
+                                </div>
+                                ${showAnswers ? '<div class="key-badge">GABARITO</div>' : ''}
+                            </div>
+                            <table class="gab-table">
+                                <thead><tr>${headerCols}</tr></thead>
+                                <tbody>${tableRows}</tbody>
+                            </table>
+                            <div class="footer">
+                                Questões ${startQ} a ${endQ} de ${numQuestions} | ${schoolName}
+                            </div>
+                        </div>
+                    `;
+                }
+
+                const printWindow = window.open('', '_blank');
+                printWindow.document.write(`
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>${schoolName} - Gabarito</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Roboto', sans-serif; }
+        .page {
+            width: 210mm;
+            min-height: 297mm;
+            padding: 15mm 20mm;
+            margin: 0 auto;
+            border: 2px solid #FF6D00;
+            page-break-after: always;
+            background: white;
+        }
+        .header { text-align: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #FF6D00; }
+        .logo { max-height: 60px; max-width: 150px; margin-bottom: 8px; }
+        .header h1 { color: #FF6D00; font-size: 20px; margin-bottom: 4px; }
+        .header h2 { font-size: 14px; font-weight: 500; }
+        .fields { display: flex; gap: 20px; margin-bottom: 15px; align-items: flex-end; flex-wrap: wrap; }
+        .field { flex: 1; min-width: 150px; }
+        .field.small { flex: none; width: 80px; }
+        .field label { font-size: 11px; color: #666; display: block; margin-bottom: 4px; }
+        .line { border-bottom: 1px solid #333; height: 20px; }
+        .line.inline { display: flex; gap: 4px; border: none; }
+        .line.inline span { background: #f5f5f5; padding: 4px 8px; border: 1px solid #ccc; }
+        .key-badge { background: #FF6D00; color: white; padding: 8px 20px; font-weight: bold; }
+        .gab-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        .gab-table th, .gab-table td { border: 1px solid #333; padding: 4px; text-align: center; }
+        .gab-table th { background: #FF6D00; color: white; font-weight: 500; }
+        .gab-table .qnum { background: #f5f5f5; font-weight: bold; width: 35px; }
+        .gab-table .alt { width: 32px; }
+        .gab-table .divider { width: 10px; background: #ddd; border: none; }
+        .bubble { width: 26px; height: 26px; border: 2px solid #333; border-radius: 4px; margin: 0 auto; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 11px; background: white; }
+        .bubble.filled { background: #FF6D00; border-color: #E65100; color: white; }
+        .gab-table tr:nth-child(even) { background: #fafafa; }
+        .footer { margin-top: 15px; text-align: center; font-size: 10px; color: #666; padding-top: 8px; border-top: 1px solid #ccc; }
+        @media print { body { print-color-adjust: exact; -webkit-print-color-adjust: exact; } }
+    </style>
+</head>
+<body>
+    ${pagesHTML}
+</body>
+</html>`);
+                printWindow.document.close();
+                return printWindow;
             }
 
             btnGenerateBlank.addEventListener('click', () => {
+                loadConfig();
                 if (!currentConfig) {
                     showToast('Configure o gabarito primeiro!', true);
                     return;
                 }
-
-                const configData = {
-                    numQuestions: currentConfig.numQuestions,
-                    numAlternatives: currentConfig.numAlternatives,
-                    leftColumn: currentConfig.leftColumn,
-                    rightColumn: currentConfig.rightColumn,
-                    schoolName: currentConfig.schoolName || '',
-                    logoUrl: currentConfig.logoUrl || '',
-                    answers: ''
-                };
-
-                const pagesHTML = generator.createGabaritoHTML(configData, null);
-                gabaritoPages.innerHTML = pagesHTML;
-                gabaritoPreview.classList.remove('hidden');
-                qrSection.classList.remove('hidden');
-                generateQRCode('');
-                btnCopy.classList.add('hidden');
-                gabaritoPreview.scrollIntoView({ behavior: 'smooth' });
-                showToast('Gabarito em branco gerado!');
+                openPrintWindow('');
+                showToast('Gabarito aberto para impressão!');
             });
 
             btnGenerateKey.addEventListener('click', () => {
+                loadConfig();
                 if (!currentConfig) {
                     showToast('Configure o gabarito primeiro!', true);
                     return;
                 }
-
                 if (!currentConfig.correctAnswers) {
-                    showToast('Crie o gabarito primeiro em Config!', true);
+                    showToast('Crie o gabarito em Config!', true);
                     return;
                 }
-
-                const configData = {
-                    numQuestions: currentConfig.numQuestions,
-                    numAlternatives: currentConfig.numAlternatives,
-                    leftColumn: currentConfig.leftColumn,
-                    rightColumn: currentConfig.rightColumn,
-                    schoolName: currentConfig.schoolName || '',
-                    logoUrl: currentConfig.logoUrl || '',
-                    answers: currentConfig.correctAnswers
-                };
-
-                const pagesHTML = generator.createGabaritoHTML(configData, currentConfig.correctAnswers);
-                gabaritoPages.innerHTML = pagesHTML;
-                gabaritoPreview.classList.remove('hidden');
-                qrSection.classList.remove('hidden');
-                generateQRCode(currentConfig.correctAnswers);
-                btnCopy.classList.remove('hidden');
-                gabaritoPreview.scrollIntoView({ behavior: 'smooth' });
-                showToast('Gabarito com chave gerado!');
+                openPrintWindow(currentConfig.correctAnswers);
+                showToast('Gabarito com chave aberto!');
             });
 
-            btnCopy.addEventListener('click', () => {
-                if (!currentConfig || !currentConfig.correctAnswers) {
-                    showToast('Sem gabarito para copiar', true);
-                    return;
-                }
-
-                const dataToCopy = JSON.stringify({
-                    answers: currentConfig.correctAnswers,
-                    questions: currentConfig.numQuestions,
-                    alternatives: currentConfig.numAlternatives,
-                    leftColumn: currentConfig.leftColumn,
-                    rightColumn: currentConfig.rightColumn
-                });
-
-                navigator.clipboard.writeText(dataToCopy).then(() => {
-                    showToast('Chave copiada!');
-                }).catch(() => {
-                    showToast('Erro ao copiar', true);
-                });
-            });
-
-            btnPrint.addEventListener('click', () => {
-                window.print();
-            });
-
-            // Carregar config do Firebase/LocalStorage
-            try {
-                const stored = localStorage.getItem('legab_config');
-                if (stored) {
-                    currentConfig = JSON.parse(stored);
-                    console.log('Config carregada:', currentConfig);
-                }
-            } catch (e) {
-                console.error('Erro ao carregar config:', e);
-            }
+            loadConfig();
         });
     </script>
 </body>
