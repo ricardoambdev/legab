@@ -1,22 +1,12 @@
 let currentAnswers = [];
-let currentConfig = {
-    numQuestions: 65,
-    numAlternatives: 5,
-    leftColumn: 33,
-    rightColumn: 32
-};
+let currentConfig = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
     const configManager = new ConfigManager();
     const generator = new GabaritoGenerator();
 
-    const genQuestionsInput = document.getElementById('gen-questions');
-    const genAlternativesSelect = document.getElementById('gen-alternatives');
-    const genLeftInput = document.getElementById('gen-left');
-    const genRightInput = document.getElementById('gen-right');
     const genAnswersInput = document.getElementById('gen-answers');
     const genCounter = document.getElementById('gen-counter');
-    const btnLoadConfig = document.getElementById('btn-load-config');
     const btnGenerate = document.getElementById('btn-generate');
     const btnClear = document.getElementById('btn-clear');
     const btnRandom = document.getElementById('btn-random');
@@ -29,6 +19,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const gabaritoPages = document.getElementById('gabarito-pages');
     const qrSection = document.getElementById('qr-section');
     const qrcodeContainer = document.getElementById('qrcode-container');
+    const noConfigMsg = document.getElementById('no-config-msg');
+    const generateSection = document.getElementById('generate-section');
 
     function showToast(message, isError = false) {
         const toast = document.getElementById('toast');
@@ -38,12 +30,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function getAlternativesText() {
-        const num = currentConfig.numAlternatives;
+        const num = currentConfig?.numAlternatives || 5;
         return 'ABCDE'.substring(0, num);
     }
 
+    function getTotalQuestions() {
+        return currentConfig?.numQuestions || 65;
+    }
+
     function updateCounter() {
-        const total = currentConfig.numQuestions;
+        const total = getTotalQuestions();
         const current = currentAnswers.filter(a => a !== null && a !== undefined).length;
         genCounter.textContent = `${current}/${total}`;
 
@@ -69,7 +65,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function renderRows() {
         const alts = getAlternativesText();
-        const numQuestions = currentConfig.numQuestions;
+        const numQuestions = getTotalQuestions();
 
         let html = '';
         for (let i = 0; i < numQuestions; i++) {
@@ -119,7 +115,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function clearAnswers() {
-        currentAnswers = new Array(currentConfig.numQuestions).fill(null);
+        currentAnswers = new Array(getTotalQuestions()).fill(null);
         updateInput();
         updateCounter();
         document.querySelectorAll('.answer-btn').forEach(btn => {
@@ -130,7 +126,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     function randomAnswers() {
         const alts = getAlternativesText();
         currentAnswers = [];
-        for (let i = 0; i < currentConfig.numQuestions; i++) {
+        for (let i = 0; i < getTotalQuestions(); i++) {
             const randomAlt = alts[Math.floor(Math.random() * alts.length)];
             currentAnswers.push(randomAlt);
         }
@@ -143,9 +139,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    function rebuildUI() {
+    function updateSummary() {
+        if (currentConfig) {
+            document.getElementById('summary-questions').textContent = currentConfig.numQuestions;
+            document.getElementById('summary-columns').textContent =
+                `${currentConfig.leftColumn} + ${currentConfig.rightColumn}`;
+            document.getElementById('summary-alts').textContent = currentConfig.numAlternatives;
+        }
+    }
+
+    function loadConfig() {
+        const numQuestions = getTotalQuestions();
         const oldLen = currentAnswers.length;
-        const newLen = currentConfig.numQuestions;
+        const newLen = numQuestions;
 
         if (newLen > oldLen) {
             for (let i = oldLen; i < newLen; i++) {
@@ -159,89 +165,29 @@ document.addEventListener('DOMContentLoaded', async () => {
         renderRows();
         updateInput();
         updateCounter();
+        updateSummary();
     }
-
-    function updateConfigFromInputs() {
-        currentConfig.numQuestions = parseInt(genQuestionsInput.value) || 65;
-        currentConfig.numAlternatives = parseInt(genAlternativesSelect.value) || 5;
-        currentConfig.leftColumn = parseInt(genLeftInput.value) || 33;
-        currentConfig.rightColumn = parseInt(genRightInput.value) || 32;
-    }
-
-    genQuestionsInput.addEventListener('change', () => {
-        const total = parseInt(genLeftInput.value) + parseInt(genRightInput.value);
-        if (parseInt(genQuestionsInput.value) !== total) {
-            showToast(`Colunas devem somar ${genQuestionsInput.value}`, true);
-        }
-        rebuildUI();
-    });
-
-    genAlternativesSelect.addEventListener('change', () => {
-        currentAnswers = currentAnswers.map(a => {
-            const alts = getAlternativesText();
-            return alts.includes(a) ? a : null;
-        });
-        rebuildUI();
-    });
-
-    genLeftInput.addEventListener('change', () => {
-        const total = parseInt(genLeftInput.value) + parseInt(genRightInput.value);
-        genQuestionsInput.value = total;
-        rebuildUI();
-    });
-
-    genRightInput.addEventListener('change', () => {
-        const total = parseInt(genLeftInput.value) + parseInt(genRightInput.value);
-        genQuestionsInput.value = total;
-        rebuildUI();
-    });
 
     btnClear.addEventListener('click', clearAnswers);
     btnRandom.addEventListener('click', randomAnswers);
 
-    btnLoadConfig.addEventListener('click', async () => {
-        try {
-            const config = await configManager.getConfig();
-            if (config) {
-                genQuestionsInput.value = config.numQuestions;
-                genAlternativesSelect.value = config.numAlternatives;
-                genLeftInput.value = config.leftColumn;
-                genRightInput.value = config.rightColumn;
-
-                if (config.correctAnswers) {
-                    currentAnswers = config.correctAnswers.toUpperCase().split('');
-                } else {
-                    currentAnswers = new Array(config.numQuestions).fill(null);
-                }
-
-                currentConfig = { ...config };
-                rebuildUI();
-                showToast('Configuração carregada!');
-            } else {
-                showToast('Nenhuma configuração encontrada', true);
-            }
-        } catch (error) {
-            showToast('Erro: ' + error.message, true);
-        }
-    });
-
     btnGenerate.addEventListener('click', async () => {
-        updateConfigFromInputs();
-
-        const total = currentConfig.leftColumn + currentConfig.rightColumn;
-        if (currentConfig.numQuestions !== total) {
-            showToast(`Colunas devem somar ${currentConfig.numQuestions}`, true);
+        if (!currentConfig) {
+            showToast('Configure o gabarito primeiro!', true);
             return;
         }
 
         const answers = currentAnswers.map(a => a || '').join('');
-        if (answers.length !== currentConfig.numQuestions) {
-            showToast(`Complete todas as ${currentConfig.numQuestions} questões`, true);
+        if (answers.length !== getTotalQuestions()) {
+            showToast(`Complete todas as ${getTotalQuestions()} questões`, true);
             return;
         }
 
         const configData = {
-            ...currentConfig,
+            numQuestions: currentConfig.numQuestions,
+            numAlternatives: currentConfig.numAlternatives,
+            leftColumn: currentConfig.leftColumn,
+            rightColumn: currentConfig.rightColumn,
             answers: answers
         };
 
@@ -286,9 +232,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     btnShowKey.addEventListener('click', () => {
+        if (!currentConfig) return;
+
         const answers = currentAnswers.map(a => a || '').join('');
         const configData = {
-            ...currentConfig,
+            numQuestions: currentConfig.numQuestions,
+            numAlternatives: currentConfig.numAlternatives,
+            leftColumn: currentConfig.leftColumn,
+            rightColumn: currentConfig.rightColumn,
             answers: answers
         };
 
@@ -301,24 +252,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.print();
     });
 
-    renderLabels();
-    renderRows();
-    updateCounter();
+    configManager.onReady(async () => {
+        const config = await configManager.getConfig();
 
-    const config = await configManager.getConfig();
-    if (config) {
-        genQuestionsInput.value = config.numQuestions;
-        genAlternativesSelect.value = config.numAlternatives;
-        genLeftInput.value = config.leftColumn;
-        genRightInput.value = config.rightColumn;
-
-        if (config.correctAnswers) {
-            currentAnswers = config.correctAnswers.toUpperCase().split('');
-        } else {
-            currentAnswers = new Array(config.numQuestions).fill(null);
+        if (!config || !config.correctAnswers) {
+            noConfigMsg.classList.remove('hidden');
+            generateSection.classList.add('hidden');
+            return;
         }
 
-        currentConfig = { ...config };
-        rebuildUI();
-    }
+        currentConfig = config;
+        noConfigMsg.classList.add('hidden');
+        generateSection.classList.remove('hidden');
+
+        currentAnswers = config.correctAnswers.toUpperCase().split('');
+
+        loadConfig();
+    });
 });

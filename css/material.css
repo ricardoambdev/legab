@@ -576,6 +576,62 @@ body {
     color: var(--primary);
 }
 
+/* Config Summary */
+.config-summary {
+    display: flex;
+    justify-content: space-around;
+    padding: 12px;
+}
+
+.config-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.config-item .material-icons {
+    color: var(--primary);
+    font-size: 24px;
+}
+
+.config-item div {
+    display: flex;
+    flex-direction: column;
+}
+
+.config-item strong {
+    font-size: 1.1rem;
+    color: var(--primary-dark);
+}
+
+.config-item small {
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 40px 20px;
+}
+
+.empty-state .material-icons {
+    font-size: 64px;
+    color: var(--text-secondary);
+    margin-bottom: 16px;
+}
+
+.empty-state p {
+    font-size: 1.1rem;
+    color: var(--text-secondary);
+    margin-bottom: 24px;
+}
+
+.empty-state .md-btn {
+    margin: 0 auto;
+}
+
 /* Debug */
 .debug-log {
     background: #1e1e1e;
