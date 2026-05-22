@@ -22,32 +22,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         setTimeout(() => toast.classList.remove('show'), 3000);
     }
 
-    function updateSummary() {
-        if (currentConfig) {
-            document.getElementById('summary-questions').textContent = currentConfig.numQuestions;
-            document.getElementById('summary-columns').textContent =
-                `${currentConfig.leftColumn} + ${currentConfig.rightColumn}`;
-            document.getElementById('summary-alts').textContent = currentConfig.numAlternatives;
-            document.getElementById('summary-school').textContent = currentConfig.schoolName || '-';
-        }
-    }
-
-    function generateGabarito(showAnswers) {
-        if (!currentConfig) return null;
-
-        const configData = {
-            numQuestions: currentConfig.numQuestions,
-            numAlternatives: currentConfig.numAlternatives,
-            leftColumn: currentConfig.leftColumn,
-            rightColumn: currentConfig.rightColumn,
-            schoolName: currentConfig.schoolName || '',
-            logoUrl: currentConfig.logoUrl || '',
-            answers: showAnswers ? (currentConfig.correctAnswers || '') : ''
-        };
-
-        return generator.createGabaritoHTML(configData, showAnswers ? currentConfig.correctAnswers : null);
-    }
-
     function generateQRCode(answers) {
         if (!currentConfig) return;
 
@@ -78,13 +52,24 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
 
-        const pagesHTML = generateGabarito(false);
+        const configData = {
+            numQuestions: currentConfig.numQuestions,
+            numAlternatives: currentConfig.numAlternatives,
+            leftColumn: currentConfig.leftColumn,
+            rightColumn: currentConfig.rightColumn,
+            schoolName: currentConfig.schoolName || '',
+            logoUrl: currentConfig.logoUrl || '',
+            answers: ''
+        };
+
+        const pagesHTML = generator.createGabaritoHTML(configData, null);
         gabaritoPages.innerHTML = pagesHTML;
         gabaritoPreview.classList.remove('hidden');
         qrSection.classList.remove('hidden');
 
         generateQRCode('');
 
+        btnCopy.classList.add('hidden');
         gabaritoPreview.scrollIntoView({ behavior: 'smooth' });
         showToast('Gabarito em branco gerado!');
     });
@@ -100,13 +85,24 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
 
-        const pagesHTML = generateGabarito(true);
+        const configData = {
+            numQuestions: currentConfig.numQuestions,
+            numAlternatives: currentConfig.numAlternatives,
+            leftColumn: currentConfig.leftColumn,
+            rightColumn: currentConfig.rightColumn,
+            schoolName: currentConfig.schoolName || '',
+            logoUrl: currentConfig.logoUrl || '',
+            answers: currentConfig.correctAnswers
+        };
+
+        const pagesHTML = generator.createGabaritoHTML(configData, currentConfig.correctAnswers);
         gabaritoPages.innerHTML = pagesHTML;
         gabaritoPreview.classList.remove('hidden');
         qrSection.classList.remove('hidden');
 
         generateQRCode(currentConfig.correctAnswers);
 
+        btnCopy.classList.remove('hidden');
         gabaritoPreview.scrollIntoView({ behavior: 'smooth' });
         showToast('Gabarito com chave gerado!');
     });
@@ -148,7 +144,5 @@ document.addEventListener('DOMContentLoaded', async () => {
         currentConfig = config;
         noConfigMsg.classList.add('hidden');
         generateSection.classList.remove('hidden');
-
-        updateSummary();
     });
 });
