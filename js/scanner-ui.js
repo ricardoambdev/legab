@@ -3,6 +3,7 @@ let stream = null;
 let detectionInterval = null;
 let capturedImage = null;
 let isProcessing = false;
+let videoElement = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
     config = await loadConfig();
@@ -13,7 +14,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('config-questions').textContent = numQuestions;
     document.getElementById('config-alternatives').textContent = numAlternatives;
 
-    const video = document.getElementById('video');
     const btnProcess = document.getElementById('btn-process');
     const btnStop = document.getElementById('btn-stop');
     const btnRestart = document.getElementById('btn-restart');
@@ -25,22 +25,40 @@ document.addEventListener('DOMContentLoaded', async () => {
     const scanStatus = document.getElementById('scan-status');
 
     let detectionCount = 0;
-    const detectionThreshold = 3; // Detecta após 3 verificações consecutivas
+    const detectionThreshold = 3;
 
     // Start camera
-    startCamera();
+    await startCamera();
 
     async function startCamera() {
         try {
+            updateScanStatus('searching', 'Iniciando câmera...');
+            
+            // Tenta pegar a câmera traseira
             stream = await navigator.mediaDevices.getUserMedia({ 
                 video: { 
-                    facingMode: 'environment',
-                    width: { ideal: 1280 },
-                    height: { ideal: 720 }
-                } 
+                    facingMode: { exact: 'environment' } || 'environment',
+                    width: { ideal: 1920 },
+                    height: { ideal: 1080 }
+                },
+                audio: false
             });
             
-            video.srcObject = stream;
+            videoElement = document.getElementById('video');
+            videoElement.srcObject = stream;
+            
+            // Espera o vídeo carregar
+            await new Promise((resolve) => {
+                videoElement.onloadedmetadata = () => {
+                    videoElement.play().then(resolve).catch(resolve);
+                };
+            });
+            
+            // Pequeno delay para garantir que o vídeo está renderizando
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            console.log('Câmera iniciada:', videoElement.videoWidth, 'x', videoElement.videoHeight);
+            
             processSection.classList.add('hidden');
             btnStop.classList.remove('hidden');
             btnRestart.classList.add('hidden');
@@ -50,17 +68,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             updateScanStatus('searching', 'Procurando gabarito...');
             
             detectionInterval = setInterval(async () => {
-                if (isProcessing) return;
+                if (isProcessing || !videoElement || videoElement.readyState !== 4) return;
                 
-                const detected = await detectGabarito(video);
+                const detected = await detectGabarito();
                 
                 if (detected) {
                     detectionCount++;
                     updateScanStatus('detecting', `Gabarito detectado! (${detectionCount}/${detectionThreshold})`);
                     
                     if (detectionCount >= detectionThreshold) {
-                        // Captura a imagem atual
-                        capturedImage = captureFrame(video);
+                        capturedImage = captureFrame();
                         showProcessButton();
                         stopDetection();
                     }
@@ -68,42 +85,64 @@ document.addEventListener('DOMContentLoaded', async () => {
                     detectionCount = 0;
                     updateScanStatus('searching', 'Procurando gabarito...');
                 }
-            }, 800); // Verifica a cada 800ms
+            }, 1000);
             
         } catch (error) {
-            showToast('Erro na câmera: ' + error.message, true);
+            console.error('Erro na câmera:', error);
+            showToast('Erro: ' + error.message + '. Tente usar HTTPS ou localhost.', true);
+            updateScanStatus('error', 'Erro na câmera');
         }
     }
 
-    async function detectGabarito(video) {
-        // Tenta detectar se há um gabarito visível
-        // Usa análise simples de contraste e padrões
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        ctx.drawImage(video, 0, 0);
+    async function detectGabarito() {
+        if (!videoElement || videoElement.readyState !== 4) return false;
+        if (videoElement.videoWidth === 0) return false;
         
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const data = imageData.data;
-        
-        // Analisa contraste médio (gabaritos têm alto contraste)
-        let contrast = 0;
-        const sampleStep = 10;
-        let samples = 0;
-        
-        for (let i = 0; i < data.length; i += 4 * sampleStep) {
-            if (i + 4 * sampleStep < data.length) {
-                const diff = Math.abs(data[i] - data[i + 4 * sampleStep]);
-                contrast += diff;
-                samples++;
+        try {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = videoElement.videoWidth;
+            canvas.height = videoElement.videoHeight;
+            ctx.drawImage(videoElement, 0, 0);
+            
+            // Pega uma amostra do centro da imagem (onde está o gabarito)
+            const centerX = Math.floor(canvas.width / 2);
+            const centerY = Math.floor(canvas.height / 2);
+            const sampleWidth = Math.floor(canvas.width / 4);
+            const sampleHeight = Math.floor(canvas.height / 4);
+            
+            const imageData = ctx.getImageData(
+                centerX - sampleWidth / 2,
+                centerY - sampleHeight / 2,
+                sampleWidth,
+                sampleHeight
+            );
+            
+            const data = imageData.data;
+            let brightPixels = 0;
+            let darkPixels = 0;
+            
+            // Conta pixels claros e escuros
+            for (let i = 0; i < data.length; i += 16) { // Amostra a cada 4 pixels
+                const brightness = (data[i] + data[i + 1] + data[i + 2]) / 3;
+                if (brightness > 200) brightPixels++;
+                else if (brightness < 100) darkPixels++;
             }
+            
+            const total = brightPixels + darkPixels;
+            if (total === 0) return false;
+            
+            // Gabarito tem mistura de branco (papel) e preto (texto/bolhas)
+            const hasContrast = brightPixels > total * 0.3 && darkPixels > total * 0.05;
+            const hasText = darkPixels > total * 0.05;
+            
+            console.log('Detecção:', { brightPixels, darkPixels, total, hasContrast, hasText });
+            
+            return hasContrast && hasText;
+        } catch (e) {
+            console.error('Erro na detecção:', e);
+            return false;
         }
-        
-        const avgContrast = samples > 0 ? contrast / samples : 0;
-        
-        // Gabaritos têm alto contraste (preto no branco)
-        return avgContrast > 30; // Threshold ajustável
     }
 
     function updateScanStatus(status, text) {
@@ -116,6 +155,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         } else if (status === 'detecting') {
             icon.textContent = 'visibility';
             icon.className = 'status-icon material-icons success';
+        } else if (status === 'error') {
+            icon.textContent = 'error';
+            icon.className = 'status-icon material-icons error';
         }
         
         textEl.textContent = text;
@@ -123,6 +165,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function showProcessButton() {
         processSection.classList.remove('hidden');
+        showToast('Gabarito detectado! Clique em processar.', false);
     }
 
     function stopDetection() {
@@ -132,13 +175,23 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    function captureFrame(video) {
+    function captureFrame() {
+        if (!videoElement || videoElement.videoWidth === 0) {
+            console.error('Vídeo não está pronto');
+            return null;
+        }
+        
         const canvas = document.createElement('canvas');
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
+        canvas.width = videoElement.videoWidth;
+        canvas.height = videoElement.videoHeight;
         const ctx = canvas.getContext('2d');
-        ctx.drawImage(video, 0, 0);
-        return canvas.toDataURL('image/jpeg', 0.9);
+        ctx.drawImage(videoElement, 0, 0);
+        
+        // Debug: mostra a imagem capturada
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+        console.log('Imagem capturada:', canvas.width, 'x', canvas.height, dataUrl.length, 'bytes');
+        
+        return dataUrl;
     }
 
     // Process button
@@ -218,9 +271,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     async function processImage(imageSrc, cfg) {
+        console.log('Processando imagem:', imageSrc.length, 'bytes');
         const worker = await Tesseract.createWorker('por');
         const { data: { text } } = await worker.recognize(imageSrc);
         await worker.terminate();
+        console.log('Texto OCR:', text.substring(0, 200));
         return parseAnswers(text, cfg);
     }
 
@@ -230,6 +285,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         const options = 'ABCDE'.substring(0, numA);
         const answers = new Array(numQ).fill('');
         const lines = text.split('\n');
+        
+        console.log('Linhas detectadas:', lines.length);
         
         for (const line of lines) {
             const clean = line.toUpperCase().replace(/[^A-E0-9\s]/g, ' ');
@@ -244,6 +301,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             const candidate = parts[j].replace(/[^\w]/g, '');
                             if (options.includes(candidate) && candidate.length === 1) {
                                 answers[qNum - 1] = candidate;
+                                console.log(`Questão ${qNum}: ${candidate}`);
                                 break;
                             }
                         }
@@ -265,6 +323,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 });
             }
         }
+        
+        const detected = answers.filter(a => a !== '').length;
+        console.log(`Detectadas ${detected}/${numQ} respostas`);
         
         return answers.join('');
     }
@@ -335,6 +396,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         const toast = document.getElementById('toast');
         toast.textContent = msg;
         toast.className = `md-toast show ${isError ? 'error' : 'success'}`;
-        setTimeout(() => toast.classList.remove('show'), 3000);
+        setTimeout(() => toast.classList.remove('show'), 4000);
     }
 });
