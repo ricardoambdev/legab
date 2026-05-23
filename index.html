@@ -53,7 +53,15 @@
                     <span class="status-text">Procurando gabarito...</span>
                 </div>
                 
-                <!-- Botões sobrepostos -->
+                <!-- Botão de processar sobreposto -->
+                <div class="process-button-container hidden" id="process-button-container">
+                    <button id="btn-process" class="process-btn">
+                        <span class="material-icons">check</span>
+                        Processar Gabarito
+                    </button>
+                </div>
+                
+                <!-- Controles -->
                 <div class="camera-controls">
                     <button id="btn-stop" class="control-btn" title="Parar câmera">
                         <span class="material-icons">stop</span>
@@ -62,21 +70,6 @@
                         <span class="material-icons">refresh</span>
                     </button>
                 </div>
-            </div>
-        </div>
-
-        <!-- Card de processamento -->
-        <div id="process-section" class="action-card hidden">
-            <div class="action-content">
-                <div class="action-icon success">
-                    <span class="material-icons">check_circle</span>
-                </div>
-                <h3>Gabarito Detectado!</h3>
-                <p>O sistema identificou um gabarito. Clique abaixo para processar.</p>
-                <button id="btn-process" class="md-btn md-btn-primary md-btn-block md-btn-large">
-                    <span class="material-icons">check</span>
-                    Processar Gabarito
-                </button>
             </div>
         </div>
 
@@ -100,39 +93,60 @@
                 Verificar Respostas
             </button>
         </div>
-
-        <!-- Resultado -->
-        <div id="result-section" class="md-card hidden">
-            <h3>Resultado</h3>
-            <div class="result-stats">
-                <div class="stat correct">
-                    <span class="stat-value" id="correct-count">0</span>
-                    <span class="stat-label">Acertos</span>
-                </div>
-                <div class="stat wrong">
-                    <span class="stat-value" id="wrong-count">0</span>
-                    <span class="stat-label">Erros</span>
-                </div>
-                <div class="stat blank">
-                    <span class="stat-value" id="blank-count">0</span>
-                    <span class="stat-label">Branco</span>
-                </div>
-            </div>
-            <div class="result-score">
-                <span class="score-value" id="score-percent">0%</span>
-            </div>
-            <div id="pass-fail" class="pass-fail"></div>
-        </div>
-
-        <!-- Info config -->
-        <div class="md-card config-mini">
-            <p>
-                <span class="material-icons" style="vertical-align: middle; font-size: 16px;">info</span>
-                <strong id="config-questions">60</strong> questões | 
-                <strong id="config-alternatives">5</strong> alternativas
-            </p>
-        </div>
     </main>
+
+    <!-- Modal de Resultado -->
+    <div id="result-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Resultado</h2>
+                <button class="modal-close" id="modal-close">
+                    <span class="material-icons">close</span>
+                </button>
+            </div>
+            
+            <div class="modal-body">
+                <div class="student-info">
+                    <div class="md-field">
+                        <label>Nome do Aluno</label>
+                        <input type="text" id="student-name" class="md-input" placeholder="Digite o nome do aluno">
+                    </div>
+                    <div class="md-field">
+                        <label>Data</label>
+                        <input type="text" id="result-date" class="md-input" readonly>
+                    </div>
+                </div>
+
+                <div class="result-stats">
+                    <div class="stat correct">
+                        <span class="stat-value" id="correct-count">0</span>
+                        <span class="stat-label">Acertos</span>
+                    </div>
+                    <div class="stat wrong">
+                        <span class="stat-value" id="wrong-count">0</span>
+                        <span class="stat-label">Erros</span>
+                    </div>
+                    <div class="stat blank">
+                        <span class="stat-value" id="blank-count">0</span>
+                        <span class="stat-label">Branco</span>
+                    </div>
+                </div>
+                
+                <div class="result-score">
+                    <span class="score-value" id="score-percent">0%</span>
+                </div>
+                
+                <div id="pass-fail" class="pass-fail"></div>
+            </div>
+            
+            <div class="modal-footer">
+                <button id="btn-save-result" class="md-btn md-btn-primary md-btn-block">
+                    <span class="material-icons">save</span>
+                    Salvar Resultado
+                </button>
+            </div>
+        </div>
+    </div>
 
     <div id="toast" class="md-toast"></div>
 

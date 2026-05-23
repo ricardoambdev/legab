@@ -198,6 +198,80 @@ document.addEventListener('DOMContentLoaded', async () => {
     btnClear.addEventListener('click', clearAnswers);
     btnRandom.addEventListener('click', randomAnswers);
 
+    // Test gabarito button
+    const btnTestGabarito = document.getElementById('btn-test-gabarito');
+    if (btnTestGabarito) {
+        btnTestGabarito.addEventListener('click', () => {
+            // Open new window with test gabarito
+            const numQ = currentConfig.numQuestions || 60;
+            const numA = currentConfig.numAlternatives || 5;
+            const left = currentConfig.leftColumn || 30;
+            const right = currentConfig.rightColumn || 30;
+            const opts = 'ABCDE'.substring(0, numA);
+            
+            // Generate gabarito with answers in black
+            let html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Teste Gabarito</title>';
+            html += '<style>';
+            html += `*{margin:0;padding:0;box-sizing:border-box}body{font-family:Roboto,sans-serif;background:#fff;padding:20px}.gabarito{text-align:center}h1{color:#333;margin-bottom:20px}table{width:100%;border-collapse:collapse;margin-top:20px}th{background:#333;color:#fff;padding:8px 4px;font-size:12px}td{border:2px solid #333;padding:0;text-align:center}.q-num{background:#eee;width:30px;font-weight:700}.alt-head{width:30px}.sep{width:8px;background:#333;border:none}.bubble{width:24px;height:24px;border:2px solid #333;border-radius:4px;margin:2px auto;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:10px;background:#fff}.bubble.filled{background:#000;border-color:#000;color:#fff}tr:nth-child(even){background:#f5f5f5}`;
+            html += '</style></head><body>';
+            html += '<div class="gabarito"><h1>Gabarito de Teste</h1><p>Aponte a câmera para testar</p>';
+            
+            const totalPages = Math.ceil(numQ / (left + right));
+            for (let p = 0; p < totalPages; p++) {
+                const startQ = p * (left + right) + 1;
+                const endQ = Math.min(startQ + left + right - 1, numQ);
+                
+                html += '<h2>Questões ' + startQ + '-' + endQ + '</h2><table><thead><tr><th class="q-num">Q</th>';
+                for (let a = 0; a < numA; a++) html += '<th class="alt-head">' + opts[a] + '</th>';
+                html += '<th class="sep"></th><th class="q-num">Q</th>';
+                for (let a = 0; a < numA; a++) html += '<th class="alt-head">' + opts[a] + '</th>';
+                html += '</tr></thead><tbody>';
+                
+                for (let r = 0; r < left; r++) {
+                    const q1 = startQ + r;
+                    const q2 = startQ + r + left;
+                    html += '<tr>';
+                    
+                    if (q1 <= Math.min(startQ + left - 1, numQ)) {
+                        html += '<td class="q-num">' + q1 + '</td>';
+                        const ans1 = currentConfig.correctAnswers[q1-1] || 'A';
+                        for (let a = 0; a < numA; a++) {
+                            const filled = opts[a] === ans1 ? 'filled' : '';
+                            html += '<td><div class="bubble ' + filled + '">' + opts[a] + '</div></td>';
+                        }
+                    } else {
+                        html += '<td class="q-num"></td>';
+                        for (let a = 0; a < numA; a++) html += '<td></td>';
+                    }
+                    
+                    html += '<td class="sep"></td>';
+                    
+                    if (q2 <= numQ) {
+                        html += '<td class="q-num">' + q2 + '</td>';
+                        const ans2 = currentConfig.correctAnswers[q2-1] || 'A';
+                        for (let a = 0; a < numA; a++) {
+                            const filled = opts[a] === ans2 ? 'filled' : '';
+                            html += '<td><div class="bubble ' + filled + '">' + opts[a] + '</div></td>';
+                        }
+                    } else {
+                        html += '<td class="q-num"></td>';
+                        for (let a = 0; a < numA; a++) html += '<td></td>';
+                    }
+                    
+                    html += '</tr>';
+                }
+                
+                html += '</tbody></table>';
+            }
+            
+            html += '</div></body></html>';
+            
+            const w = window.open('', '_blank');
+            w.document.write(html);
+            w.document.close();
+        });
+    }
+
     btnSave.addEventListener('click', async () => {
         updateConfigFromInputs();
 

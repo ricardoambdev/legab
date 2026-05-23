@@ -18,14 +18,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     const btnStop = document.getElementById('btn-stop');
     const btnRestart = document.getElementById('btn-restart');
     const btnCheck = document.getElementById('btn-check');
+    const btnSaveResult = document.getElementById('btn-save-result');
+    const modalClose = document.getElementById('modal-close');
+    const processButtonContainer = document.getElementById('process-button-container');
     const processSection = document.getElementById('process-section');
     const loadingSection = document.getElementById('loading-section');
-    const resultSection = document.getElementById('result-section');
+    const resultModal = document.getElementById('result-modal');
     const manualInput = document.getElementById('manual-answers');
     const detectionStatus = document.getElementById('detection-status');
 
     let detectionCount = 0;
     const detectionThreshold = 3;
+    let currentResult = null;
+
+    // Set date
+    const today = new Date();
+    const dateStr = today.toLocaleDateString('pt-BR');
+    document.getElementById('result-date').value = dateStr;
 
     // Start camera
     await startCamera();
@@ -56,7 +65,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             
             console.log('Câmera iniciada:', videoElement.videoWidth, 'x', videoElement.videoHeight);
             
-            processSection.classList.add('hidden');
+            processButtonContainer.classList.add('hidden');
             btnStop.classList.remove('hidden');
             btnRestart.classList.add('hidden');
             
@@ -159,7 +168,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function showProcessButton() {
-        processSection.classList.remove('hidden');
+        processButtonContainer.classList.remove('hidden');
         showToast('Gabarito detectado! Clique em processar.', false);
     }
 
@@ -188,41 +197,95 @@ document.addEventListener('DOMContentLoaded', async () => {
         return dataUrl;
     }
 
+    // Process button
     btnProcess.addEventListener('click', async () => {
         if (!capturedImage || isProcessing) return;
         
         isProcessing = true;
-        processSection.classList.add('hidden');
+        processButtonContainer.classList.add('hidden');
         showLoading(true);
         updateLoadingStatus('Processando gabarito...');
         
         try {
             const answers = await processImage(capturedImage, config);
-            const result = checkAnswers(answers, config);
-            showResult(result);
+            currentResult = checkAnswers(answers, config);
+            showResultModal(currentResult);
             stopCamera();
         } catch (error) {
             console.error(error);
             showToast('Erro: ' + error.message, true);
-            processSection.classList.remove('hidden');
+            processButtonContainer.classList.remove('hidden');
         } finally {
             isProcessing = false;
             showLoading(false);
         }
     });
 
-    btnStop.addEventListener('click', () => {
-        stopCamera();
-        processSection.classList.add('hidden');
+    // Save result button
+    btnSaveResult.addEventListener('click', () => {
+        const studentName = document.getElementById('student-name').value.trim();
+        if (!studentName) {
+            showToast('Digite o nome do aluno', true);
+            return;
+        }
+        
+        // Save to localStorage
+        const results = JSON.parse(localStorage.getItem('legab_results') || '[]');
+        results.push({
+            student: studentName,
+            date: new Date().toISOString(),
+            ...currentResult
+        });
+        localStorage.setItem('legab_results', JSON.stringify(results));
+        
+        showToast('Resultado salvo!', false);
+        closeModal();
     });
 
+    // Modal close
+    modalClose.addEventListener('click', closeModal);
+    resultModal.addEventListener('click', (e) => {
+        if (e.target === resultModal) closeModal();
+    });
+
+    function closeModal() {
+        resultModal.classList.add('hidden');
+        currentResult = null;
+    }
+
+    function showResultModal(result) {
+        document.getElementById('correct-count').textContent = result.correct;
+        document.getElementById('wrong-count').textContent = result.wrong;
+        document.getElementById('blank-count').textContent = result.blank;
+        document.getElementById('score-percent').textContent = result.percentage + '%';
+        
+        const passFail = document.getElementById('pass-fail');
+        if (result.passed) {
+            passFail.textContent = 'Aprovado!';
+            passFail.className = 'pass-fail passed';
+        } else {
+            passFail.textContent = 'Reprovado';
+            passFail.className = 'pass-fail failed';
+        }
+        
+        document.getElementById('student-name').value = '';
+        resultModal.classList.remove('hidden');
+    }
+
+    // Stop button
+    btnStop.addEventListener('click', () => {
+        stopCamera();
+        processButtonContainer.classList.add('hidden');
+    });
+
+    // Restart button
     btnRestart.addEventListener('click', () => {
         capturedImage = null;
-        processSection.classList.add('hidden');
-        resultSection.classList.add('hidden');
+        processButtonContainer.classList.add('hidden');
         startCamera();
     });
 
+    // Check manual
     btnCheck.addEventListener('click', () => {
         const answers = manualInput.value.trim().toUpperCase();
         if (!answers) {
@@ -230,7 +293,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
         const result = checkAnswers(answers, config);
-        showResult(result);
+        showResultModal(result);
     });
 
     manualInput.addEventListener('keypress', (e) => {
@@ -251,9 +314,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function showLoading(show) {
         loadingSection.classList.toggle('hidden', !show);
-        if (show) {
-            resultSection.classList.add('hidden');
-        }
     }
 
     function updateLoadingStatus(text) {
@@ -346,25 +406,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             passingScore: cfg.passingScore || 60,
             passed: percentage >= (cfg.passingScore || 60)
         };
-    }
-
-    function showResult(result) {
-        document.getElementById('correct-count').textContent = result.correct;
-        document.getElementById('wrong-count').textContent = result.wrong;
-        document.getElementById('blank-count').textContent = result.blank;
-        document.getElementById('score-percent').textContent = result.percentage + '%';
-        
-        const passFail = document.getElementById('pass-fail');
-        if (result.passed) {
-            passFail.textContent = 'Aprovado!';
-            passFail.className = 'pass-fail passed';
-        } else {
-            passFail.textContent = 'Reprovado';
-            passFail.className = 'pass-fail failed';
-        }
-        
-        resultSection.classList.remove('hidden');
-        resultSection.scrollIntoView({ behavior: 'smooth' });
     }
 
     async function loadConfig() {
