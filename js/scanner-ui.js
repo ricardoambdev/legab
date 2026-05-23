@@ -1,37 +1,31 @@
 let config = null;
 let stream = null;
-let isAutoDetect = true;
-let lastCaptureTime = 0;
+let detectionInterval = null;
+let capturedImage = null;
+let isProcessing = false;
 
 document.addEventListener('DOMContentLoaded', async () => {
     config = await loadConfig();
     
-    const numQuestions = config?.numQuestions || 6;
+    const numQuestions = config?.numQuestions || 60;
     const numAlternatives = config?.numAlternatives || 5;
     
     document.getElementById('config-questions').textContent = numQuestions;
     document.getElementById('config-alternatives').textContent = numAlternatives;
 
     const video = document.getElementById('video');
-    const btnCapture = document.getElementById('btn-capture');
-    const btnStop = document.getElementById('btn-stop');
-    const btnRetry = document.getElementById('btn-retry');
     const btnProcess = document.getElementById('btn-process');
+    const btnStop = document.getElementById('btn-stop');
+    const btnRestart = document.getElementById('btn-restart');
     const btnCheck = document.getElementById('btn-check');
-    const autoDetectToggle = document.getElementById('auto-detect');
-    const previewSection = document.getElementById('preview-section');
-    const imagePreview = document.getElementById('image-preview');
+    const processSection = document.getElementById('process-section');
     const loadingSection = document.getElementById('loading-section');
     const resultSection = document.getElementById('result-section');
     const manualInput = document.getElementById('manual-answers');
+    const scanStatus = document.getElementById('scan-status');
 
-    let currentImage = null;
-    let captureInterval = null;
-
-    // Auto detect toggle
-    autoDetectToggle.addEventListener('change', (e) => {
-        isAutoDetect = e.target.checked;
-    });
+    let detectionCount = 0;
+    const detectionThreshold = 3; // Detecta após 3 verificações consecutivas
 
     // Start camera
     startCamera();
@@ -47,56 +41,142 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
             
             video.srcObject = stream;
-            btnCapture.classList.add('hidden');
+            processSection.classList.add('hidden');
             btnStop.classList.remove('hidden');
+            btnRestart.classList.add('hidden');
             
-            // Auto capture loop
-            if (isAutoDetect) {
-                captureInterval = setInterval(async () => {
-                    const now = Date.now();
-                    if (now - lastCaptureTime > 2000) {
-                        await captureAndProcess();
+            // Start detection loop
+            detectionCount = 0;
+            updateScanStatus('searching', 'Procurando gabarito...');
+            
+            detectionInterval = setInterval(async () => {
+                if (isProcessing) return;
+                
+                const detected = await detectGabarito(video);
+                
+                if (detected) {
+                    detectionCount++;
+                    updateScanStatus('detecting', `Gabarito detectado! (${detectionCount}/${detectionThreshold})`);
+                    
+                    if (detectionCount >= detectionThreshold) {
+                        // Captura a imagem atual
+                        capturedImage = captureFrame(video);
+                        showProcessButton();
+                        stopDetection();
                     }
-                }, 500);
-            }
+                } else {
+                    detectionCount = 0;
+                    updateScanStatus('searching', 'Procurando gabarito...');
+                }
+            }, 800); // Verifica a cada 800ms
+            
         } catch (error) {
             showToast('Erro na câmera: ' + error.message, true);
         }
     }
 
-    // Capture button
-    btnCapture.addEventListener('click', async () => {
-        await captureAndProcess();
+    async function detectGabarito(video) {
+        // Tenta detectar se há um gabarito visível
+        // Usa análise simples de contraste e padrões
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        ctx.drawImage(video, 0, 0);
+        
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imageData.data;
+        
+        // Analisa contraste médio (gabaritos têm alto contraste)
+        let contrast = 0;
+        const sampleStep = 10;
+        let samples = 0;
+        
+        for (let i = 0; i < data.length; i += 4 * sampleStep) {
+            if (i + 4 * sampleStep < data.length) {
+                const diff = Math.abs(data[i] - data[i + 4 * sampleStep]);
+                contrast += diff;
+                samples++;
+            }
+        }
+        
+        const avgContrast = samples > 0 ? contrast / samples : 0;
+        
+        // Gabaritos têm alto contraste (preto no branco)
+        return avgContrast > 30; // Threshold ajustável
+    }
+
+    function updateScanStatus(status, text) {
+        const icon = scanStatus.querySelector('.status-icon');
+        const textEl = scanStatus.querySelector('.status-text');
+        
+        if (status === 'searching') {
+            icon.textContent = 'searching';
+            icon.className = 'status-icon material-icons';
+        } else if (status === 'detecting') {
+            icon.textContent = 'visibility';
+            icon.className = 'status-icon material-icons success';
+        }
+        
+        textEl.textContent = text;
+    }
+
+    function showProcessButton() {
+        processSection.classList.remove('hidden');
+    }
+
+    function stopDetection() {
+        if (detectionInterval) {
+            clearInterval(detectionInterval);
+            detectionInterval = null;
+        }
+    }
+
+    function captureFrame(video) {
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0);
+        return canvas.toDataURL('image/jpeg', 0.9);
+    }
+
+    // Process button
+    btnProcess.addEventListener('click', async () => {
+        if (!capturedImage || isProcessing) return;
+        
+        isProcessing = true;
+        processSection.classList.add('hidden');
+        showLoading(true);
+        updateLoadingStatus('Processando gabarito...');
+        
+        try {
+            const answers = await processImage(capturedImage, config);
+            const result = checkAnswers(answers, config);
+            showResult(result);
+            stopCamera();
+        } catch (error) {
+            console.error(error);
+            showToast('Erro: ' + error.message, true);
+            processSection.classList.remove('hidden');
+        } finally {
+            isProcessing = false;
+            showLoading(false);
+        }
     });
 
     // Stop button
     btnStop.addEventListener('click', () => {
         stopCamera();
+        processSection.classList.add('hidden');
     });
 
-    // Retry
-    btnRetry.addEventListener('click', () => {
-        hidePreview();
+    // Restart button
+    btnRestart.addEventListener('click', () => {
+        capturedImage = null;
+        processSection.classList.add('hidden');
+        resultSection.classList.add('hidden');
         startCamera();
-    });
-
-    // Process button
-    btnProcess.addEventListener('click', async () => {
-        if (!currentImage) return;
-        
-        showLoading(true);
-        updateLoadingStatus('Processando...');
-        
-        try {
-            const answers = await processImage(currentImage, config);
-            const result = checkAnswers(answers, config);
-            showResult(result);
-        } catch (error) {
-            console.error(error);
-            showToast('Erro: ' + error.message, true);
-        } finally {
-            showLoading(false);
-        }
     });
 
     // Check manual
@@ -116,57 +196,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    async function captureAndProcess() {
-        if (!stream) return;
-        
-        const canvas = document.createElement('canvas');
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(video, 0, 0);
-        
-        currentImage = canvas.toDataURL('image/jpeg', 0.8);
-        
-        showPreview(currentImage);
-        stopCamera();
-        
-        // Auto process
-        showLoading(true);
-        updateLoadingStatus('Analisando...');
-        
-        try {
-            const answers = await processImage(currentImage, config);
-            const result = checkAnswers(answers, config);
-            showResult(result);
-        } catch (error) {
-            console.error(error);
-            showToast('Erro: ' + error.message, true);
-            showLoading(false);
-        }
-    }
-
     function stopCamera() {
         if (stream) {
             stream.getTracks().forEach(track => track.stop());
             stream = null;
         }
-        if (captureInterval) {
-            clearInterval(captureInterval);
-            captureInterval = null;
-        }
-        btnCapture.classList.remove('hidden');
+        stopDetection();
         btnStop.classList.add('hidden');
-    }
-
-    function showPreview(imageSrc) {
-        imagePreview.src = imageSrc;
-        previewSection.classList.remove('hidden');
-        resultSection.classList.add('hidden');
-    }
-
-    function hidePreview() {
-        previewSection.classList.add('hidden');
-        currentImage = null;
+        btnRestart.classList.remove('hidden');
     }
 
     function showLoading(show) {
@@ -188,7 +225,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function parseAnswers(text, cfg) {
-        const numQ = cfg.numQuestions || 6;
+        const numQ = cfg.numQuestions || 60;
         const numA = cfg.numAlternatives || 5;
         const options = 'ABCDE'.substring(0, numA);
         const answers = new Array(numQ).fill('');
@@ -291,7 +328,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const stored = localStorage.getItem('legab_config');
             if (stored) return JSON.parse(stored);
         } catch(e) {}
-        return { numQuestions: 6, numAlternatives: 5 };
+        return { numQuestions: 60, numAlternatives: 5 };
     }
 
     function showToast(msg, isError) {
