@@ -3,13 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LeGab - Gerar Gabarito</title>
+    <title>LeGab - Gerar Folha de Respostas</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link rel="stylesheet" href="css/material.css">
     <style>
+        @media print {
+            .no-print { display: none !important; }
+            body { margin: 0; padding: 0; }
+            .print-container { 
+                display: block !important;
+                margin: 0;
+                padding: 20mm;
+            }
+        }
+
         .generate-container {
-            max-width: 800px;
+            max-width: 900px;
             margin: 0 auto;
             padding: 16px;
         }
@@ -37,74 +47,170 @@
             margin-bottom: 16px;
         }
 
-        .preview-container {
+        .print-container {
+            display: none;
             background: white;
-            border-radius: 12px;
-            padding: 24px;
+            width: 210mm;
+            min-height: 297mm;
+            margin: 0 auto 24px;
+            padding: 15mm;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+        }
+
+        .answer-sheet {
+            width: 100%;
+            height: 100%;
+        }
+
+        .sheet-header {
+            background: #FF6D00;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            color: white;
+        }
+
+        .sheet-header h1 {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 700;
+        }
+
+        .sheet-header p {
+            margin: 8px 0 0 0;
+            opacity: 0.95;
+            font-size: 14px;
+        }
+
+        .student-info {
+            display: grid;
+            grid-template-columns: 1fr 200px;
+            gap: 16px;
             margin-bottom: 24px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .info-field {
+            border: 2px solid #333;
+            border-radius: 4px;
+            padding: 12px;
+            min-height: 40px;
+        }
+
+        .info-label {
+            font-size: 10px;
+            color: #666;
+            text-transform: uppercase;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .info-value {
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        .qr-section {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #333;
+            border-radius: 4px;
+            padding: 8px;
+        }
+
+        .qr-placeholder {
+            width: 80px;
+            height: 80px;
+            background: #f5f5f5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            color: #999;
             text-align: center;
         }
 
-        .preview-container h3 {
-            margin: 0 0 16px 0;
-            color: #333;
+        .answers-area {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
         }
 
-        #preview-canvas {
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            max-width: 100%;
-            height: auto;
+        .question-column {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .question-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 4px 0;
+        }
+
+        .question-number {
+            font-weight: 700;
+            font-size: 14px;
+            min-width: 24px;
+            text-align: right;
+        }
+
+        .alternatives {
+            display: flex;
+            gap: 6px;
+            flex: 1;
+        }
+
+        .alternative {
+            flex: 1;
+            aspect-ratio: 1;
+            border: 2px solid #333;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .alternative.correct {
+            background: #4CAF50;
+            color: white;
+            border-color: #4CAF50;
+        }
+
+        .alternative.selected {
+            background: #FF6D00;
+            color: white;
+            border-color: #FF6D00;
+        }
+
+        .alternative.correct::after {
+            content: '✓';
+            position: absolute;
+            font-size: 16px;
+        }
+
+        .alternative.selected::after {
+            content: '✓';
+            position: absolute;
+            font-size: 16px;
         }
 
         .actions {
             display: flex;
             gap: 12px;
             flex-wrap: wrap;
+            margin-top: 16px;
         }
 
         .actions button {
             flex: 1;
             min-width: 150px;
-        }
-
-        .answer-key-preview {
-            margin-top: 16px;
-            padding: 16px;
-            background: #f5f5f5;
-            border-radius: 8px;
-        }
-
-        .answer-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
-            gap: 8px;
-            margin-top: 12px;
-        }
-
-        .answer-cell {
-            aspect-ratio: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: white;
-            border: 2px solid #ddd;
-            border-radius: 8px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s;
-            font-size: 14px;
-        }
-
-        .answer-cell.selected {
-            background: #FF6D00;
-            color: white;
-            border-color: #FF6D00;
-        }
-
-        .answer-cell:hover {
-            border-color: #FF6D00;
         }
 
         .instructions {
@@ -130,10 +236,37 @@
         .instructions li {
             margin: 4px 0;
         }
+
+        .firebase-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-size: 14px;
+        }
+
+        .firebase-status.connected {
+            background: #E8F5E9;
+            color: #2E7D32;
+        }
+
+        .firebase-status.disconnected {
+            background: #FFEBEE;
+            color: #C62828;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: currentColor;
+        }
     </style>
 </head>
 <body>
-    <header class="md-header">
+    <header class="md-header no-print">
         <div class="header-content">
             <div class="logo">
                 <span class="material-icons">add_box</span>
@@ -155,217 +288,319 @@
 
     <main class="md-main">
         <div class="generate-container">
-            <div class="instructions">
+            <div class="instructions no-print">
                 <h4>
                     <span class="material-icons">info</span>
                     Como usar
                 </h4>
                 <ul>
                     <li>Configure o número de questões e alternativas</li>
-                    <li>Selecione as respostas do gabarito oficial</li>
-                    <li>Imprima para usar com o scanner OMR</li>
-                    <li>O layout é compatível com o sistema de leitura</li>
+                    <li>Preencha o gabarito oficial clicando nas alternativas</li>
+                    <li>Salve no Firebase para sincronização</li>
+                    <li>Imprima a folha de respostas</li>
+                    <li>Use o scanner para corrigir</li>
                 </ul>
             </div>
 
-            <div class="options-card">
+            <div id="firebase-status" class="firebase-status disconnected">
+                <span class="status-dot"></span>
+                <span id="firebase-text">Aguardando Firebase...</span>
+            </div>
+
+            <div class="options-card no-print">
                 <h3>
                     <span class="material-icons">settings</span>
                     Configurações
                 </h3>
                 <div class="form-row">
                     <div class="md-field">
+                        <label>Título da Prova</label>
+                        <input type="text" id="exam-title" class="md-input" value="Prova 01" placeholder="Ex: Prova Bimestral">
+                    </div>
+                    <div class="md-field">
                         <label>Número de Questões</label>
                         <input type="number" id="num-questions" class="md-input" value="60" min="1" max="100">
                     </div>
                     <div class="md-field">
-                        <label>Alternativas por Questão</label>
+                        <label>Alternativas</label>
                         <select id="num-alternatives" class="md-input">
                             <option value="5">5 (A-E)</option>
                             <option value="4">4 (A-D)</option>
                             <option value="3">3 (A-C)</option>
                         </select>
                     </div>
-                    <div class="md-field">
-                        <label>Colunas</label>
-                        <select id="num-columns" class="md-input">
-                            <option value="2">2 Colunas</option>
-                            <option value="1">1 Coluna</option>
-                            <option value="3">3 Colunas</option>
-                        </select>
+                </div>
+                <div class="actions">
+                    <button class="md-btn md-btn-primary" onclick="generateSheet()">
+                        <span class="material-icons">refresh</span>
+                        Gerar Folha
+                    </button>
+                    <button class="md-btn md-btn-outline" onclick="clearAnswers()">
+                        <span class="material-icons">clear_all</span>
+                        Limpar Gabarito
+                    </button>
+                </div>
+            </div>
+
+            <div class="print-container" id="print-container">
+                <div class="answer-sheet">
+                    <div class="sheet-header">
+                        <h1 id="sheet-title">PROVA 01</h1>
+                        <p>Folha de Respostas - LeGab</p>
+                    </div>
+
+                    <div class="student-info">
+                        <div>
+                            <div class="info-label">Nome do Aluno</div>
+                            <div class="info-value" style="border-bottom: 2px solid #333; min-height: 30px;"></div>
+                        </div>
+                        <div class="qr-section">
+                            <div class="qr-placeholder" id="qr-code">
+                                QR Code aqui
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="info-label" style="margin-bottom: 8px;">Instruções</div>
+                    <div style="font-size: 11px; color: #666; margin-bottom: 16px; line-height: 1.4;">
+                        • Preencha completamente a bolha correspondente à sua resposta<br>
+                        • Use caneta preta ou lápis escuro<br>
+                        • Não rasurar ou fazer marcas fora das bolhas<br>
+                        • Cada questão possui apenas uma alternativa correta
+                    </div>
+
+                    <div class="answers-area" id="answers-area">
+                        <!-- Gerado via JavaScript -->
                     </div>
                 </div>
-                <button class="md-btn md-btn-primary" onclick="generatePreview()">
-                    <span class="material-icons">refresh</span>
-                    Gerar Visualização
-                </button>
             </div>
 
-            <div class="preview-container">
-                <h3>
-                    <span class="material-icons">visibility</span>
-                    Visualização
-                </h3>
-                <canvas id="preview-canvas"></canvas>
-                
-                <div class="answer-key-preview">
-                    <h4>Gabarito Oficial (clique para editar)</h4>
-                    <p style="color: #666; font-size: 14px;">Selecione a alternativa correta para cada questão:</p>
-                    <div id="answer-grid" class="answer-grid"></div>
-                </div>
-            </div>
-
-            <div class="options-card">
+            <div class="options-card no-print">
                 <h3>
                     <span class="material-icons">print</span>
-                    Impressão
+                    Ações
                 </h3>
                 <div class="actions">
                     <button class="md-btn md-btn-primary" onclick="printSheet()">
                         <span class="material-icons">print</span>
                         Imprimir Folha
                     </button>
-                    <button class="md-btn md-btn-outline" onclick="downloadPDF()">
-                        <span class="material-icons">download</span>
-                        Baixar PDF
+                    <button class="md-btn md-btn-outline" onclick="saveToFirebase()">
+                        <span class="material-icons">cloud_upload</span>
+                        Salvar no Firebase
                     </button>
-                    <button class="md-btn md-btn-outline" onclick="saveConfig()">
-                        <span class="material-icons">save</span>
-                        Salvar Config
+                    <button class="md-btn md-btn-outline" onclick="loadFromFirebase()">
+                        <span class="material-icons">cloud_download</span>
+                        Carregar do Firebase
                     </button>
                 </div>
             </div>
         </div>
     </main>
 
+    <!-- Firebase -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getFirestore, collection, addDoc, getDocs, doc, setDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBz8gQ6cF6X9vK8YqG3H5jL2mN1oP4qR6s",
+            authDomain: "legab-app.firebaseapp.com",
+            projectId: "legab-app",
+            storageBucket: "legab-app.appspot.com",
+            messagingSenderId: "123456789",
+            appId: "1:123456789:web:abcdef123456"
+        };
+
+        let db = null;
+        let isConnected = false;
+
+        try {
+            const app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            isConnected = true;
+            updateFirebaseStatus(true);
+            console.log('✅ Firebase conectado');
+        } catch (error) {
+            console.error('❌ Erro Firebase:', error);
+            updateFirebaseStatus(false);
+        }
+
+        function updateFirebaseStatus(connected) {
+            const statusEl = document.getElementById('firebase-status');
+            const textEl = document.getElementById('firebase-text');
+            
+            if (connected) {
+                statusEl.className = 'firebase-status connected';
+                textEl.textContent = 'Firebase conectado';
+            } else {
+                statusEl.className = 'firebase-status disconnected';
+                textEl.textContent = 'Firebase desconectado (usando armazenamento local)';
+            }
+        }
+
+        window.saveToFirebase = async function() {
+            if (!isConnected) {
+                alert('Firebase não configurado. Salvando localmente...');
+                saveConfig();
+                return;
+            }
+
+            try {
+                const config = getCurrentConfig();
+                await setDoc(doc(collection(db, 'examConfigs'), `config_${Date.now()}`), {
+                    ...config,
+                    createdAt: new Date(),
+                    version: '1.0'
+                });
+
+                localStorage.setItem('legab_config', JSON.stringify(config));
+                alert('✅ Configurada salva no Firebase!');
+            } catch (error) {
+                console.error('Erro:', error);
+                alert('Erro ao salvar: ' + error.message);
+            }
+        };
+
+        window.loadFromFirebase = async function() {
+            if (!isConnected) {
+                alert('Firebase não disponível');
+                return;
+            }
+
+            try {
+                const querySnapshot = await getDocs(collection(db, 'examConfigs'));
+                const configs = [];
+                
+                querySnapshot.forEach((doc) => {
+                    configs.push({ id: doc.id, ...doc.data() });
+                });
+
+                if (configs.length === 0) {
+                    alert('Nenhuma configuração encontrada');
+                    return;
+                }
+
+                const latest = configs.sort((a, b) => b.createdAt - a.createdAt)[0];
+                applyConfig(latest);
+                alert(`✅ Configuração "${latest.title}" carregada!`);
+            } catch (error) {
+                alert('Erro ao carregar: ' + error.message);
+            }
+        };
+
+        window.db = db;
+        window.isConnected = () => isConnected;
+    </script>
+
     <script>
         let currentConfig = {
+            title: 'Prova 01',
             numQuestions: 60,
             numAlternatives: 5,
-            columns: 2,
             answers: {}
         };
 
+        const letters = 'ABCDE';
+
         function init() {
+            const saved = localStorage.getItem('legab_config');
+            if (saved) {
+                try {
+                    const config = JSON.parse(saved);
+                    currentConfig = { ...currentConfig, ...config };
+                } catch(e) {}
+            }
+
+            document.getElementById('exam-title').value = currentConfig.title;
             document.getElementById('num-questions').value = currentConfig.numQuestions;
             document.getElementById('num-alternatives').value = currentConfig.numAlternatives;
-            document.getElementById('num-columns').value = currentConfig.columns;
             
-            generatePreview();
+            generateSheet();
         }
 
-        function generatePreview() {
+        function getCurrentConfig() {
+            return {
+                title: document.getElementById('exam-title').value,
+                numQuestions: parseInt(document.getElementById('num-questions').value),
+                numAlternatives: parseInt(document.getElementById('num-alternatives').value),
+                answers: currentConfig.answers
+            };
+        }
+
+        function generateSheet() {
+            currentConfig.title = document.getElementById('exam-title').value;
             currentConfig.numQuestions = parseInt(document.getElementById('num-questions').value);
             currentConfig.numAlternatives = parseInt(document.getElementById('num-alternatives').value);
-            currentConfig.columns = parseInt(document.getElementById('num-columns').value);
-            
-            const canvas = document.getElementById('preview-canvas');
-            const ctx = canvas.getContext('2d');
-            
-            // Configura canvas A4
-            canvas.width = 595;
-            canvas.height = 842;
-            
-            // Fundo branco
-            ctx.fillStyle = 'white';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            
-            // Cabeçalho
-            ctx.fillStyle = '#FF6D00';
-            ctx.fillRect(0, 0, canvas.width, 60);
-            
-            ctx.fillStyle = 'white';
-            ctx.font = 'bold 24px Roboto';
-            ctx.textAlign = 'center';
-            ctx.fillText('GABARITO - LeGab', canvas.width / 2, 40);
-            
-            // Área do gabarito
-            const padding = 40;
-            const availableWidth = canvas.width - (padding * 2);
-            const availableHeight = canvas.height - 100;
-            
-            const columnWidth = availableWidth / currentConfig.columns;
-            const questionsPerColumn = Math.ceil(currentConfig.numQuestions / currentConfig.columns);
-            const bubbleHeight = availableHeight / (questionsPerColumn * currentConfig.numAlternatives * 1.5);
-            const bubbleWidth = columnWidth / currentConfig.numAlternatives / 2;
-            
-            ctx.fillStyle = 'black';
-            ctx.font = '12px Roboto';
-            
-            // Desenha bolhas
-            for (let col = 0; col < currentConfig.columns; col++) {
-                const baseX = padding + (col * columnWidth) + (columnWidth * 0.2);
-                
+
+            document.getElementById('sheet-title').textContent = currentConfig.title.toUpperCase();
+
+            const answersArea = document.getElementById('answers-area');
+            answersArea.innerHTML = '';
+
+            const questionsPerColumn = Math.ceil(currentConfig.numQuestions / 2);
+
+            for (let col = 0; col < 2; col++) {
+                const column = document.createElement('div');
+                column.className = 'question-column';
+
                 for (let q = 0; q < questionsPerColumn; q++) {
                     const questionNum = col * questionsPerColumn + q + 1;
                     if (questionNum > currentConfig.numQuestions) break;
-                    
-                    const baseY = 80 + (q * currentConfig.numAlternatives * bubbleHeight * 1.5);
-                    
-                    // Número da questão
-                    ctx.textAlign = 'left';
-                    ctx.fillText(`${questionNum}.`, baseX - 15, baseY + 10);
-                    
-                    // Alternativas
+
+                    const row = document.createElement('div');
+                    row.className = 'question-row';
+
+                    const numEl = document.createElement('span');
+                    numEl.className = 'question-number';
+                    numEl.textContent = questionNum + '.';
+                    row.appendChild(numEl);
+
+                    const altsContainer = document.createElement('div');
+                    altsContainer.className = 'alternatives';
+
                     for (let alt = 0; alt < currentConfig.numAlternatives; alt++) {
-                        const x = baseX + (alt * bubbleWidth * 1.5);
-                        const y = baseY;
+                        const altEl = document.createElement('div');
+                        altEl.className = 'alternative';
+                        altEl.textContent = letters[alt];
+                        altEl.dataset.question = questionNum;
+                        altEl.dataset.letter = letters[alt];
                         
-                        // Desenha círculo
-                        ctx.beginPath();
-                        ctx.arc(x + bubbleWidth/2, y + bubbleHeight/2, bubbleWidth * 0.4, 0, Math.PI * 2);
-                        ctx.strokeStyle = 'black';
-                        ctx.lineWidth = 1.5;
-                        ctx.stroke();
-                        
-                        // Letra
-                        ctx.fillStyle = 'black';
-                        ctx.textAlign = 'center';
-                        ctx.fillText(String.fromCharCode(65 + alt), x + bubbleWidth/2, y + bubbleHeight/2 + 4);
+                        if (currentConfig.answers[questionNum] === letters[alt]) {
+                            altEl.classList.add('correct');
+                        }
+
+                        altEl.onclick = () => toggleAnswer(questionNum, letters[alt], altEl);
+                        altsContainer.appendChild(altEl);
                     }
+
+                    row.appendChild(altsContainer);
+                    column.appendChild(row);
                 }
-            }
-            
-            // Borda
-            ctx.strokeStyle = '#FF6D00';
-            ctx.lineWidth = 3;
-            ctx.strokeRect(0, 0, canvas.width, canvas.height);
-            
-            generateAnswerGrid();
-        }
 
-        function generateAnswerGrid() {
-            const grid = document.getElementById('answer-grid');
-            grid.innerHTML = '';
-            
-            for (let i = 0; i < currentConfig.numQuestions; i++) {
-                const cell = document.createElement('div');
-                cell.className = 'answer-cell';
-                cell.textContent = currentConfig.answers[i] || '-';
-                cell.onclick = () => selectAnswer(i);
-                grid.appendChild(cell);
+                answersArea.appendChild(column);
             }
         }
 
-        function selectAnswer(index) {
-            const letters = 'ABCDE'.substr(0, currentConfig.numAlternatives);
-            const current = currentConfig.answers[index];
-            let nextIndex = letters.indexOf(current) + 1;
-            
-            if (nextIndex >= currentConfig.numAlternatives || nextIndex < 0) {
-                nextIndex = 0;
+        function toggleAnswer(questionNum, letter, element) {
+            if (currentConfig.answers[questionNum] === letter) {
+                delete currentConfig.answers[questionNum];
+                element.classList.remove('correct');
+            } else {
+                // Remove previous
+                const prev = currentConfig.answers[questionNum];
+                if (prev) {
+                    const prevEl = element.parentElement.parentElement.querySelector(`[data-question="${questionNum}"][data-letter="${prev}"]`);
+                    if (prevEl) prevEl.classList.remove('correct');
+                }
+                currentConfig.answers[questionNum] = letter;
+                element.classList.add('correct');
             }
-            
-            currentConfig.answers[index] = letters[nextIndex];
-            currentConfig.answers[index] = letters[nextIndex];
-            
-            // Atualiza visual
-            const cells = document.getElementById('answer-grid').children;
-            cells[index].textContent = letters[nextIndex];
-            cells[index].classList.add('selected');
-            
-            // Atualiza canvas
-            setTimeout(generatePreview, 100);
+        }
+
+        function clearAnswers() {
+            currentConfig.answers = {};
+            generateSheet();
         }
 
         function printSheet() {
@@ -375,28 +610,14 @@
             }, 500);
         }
 
-        function downloadPDF() {
-            const canvas = document.getElementById('preview-canvas');
-            const link = document.createElement('a');
-            link.download = 'gabarito-legab.pdf';
-            link.href = canvas.toDataURL('image/png');
-            link.click();
-            alert('Para gerar PDF, use a opção de impressão e selecione "Salvar como PDF"');
-        }
-
         function saveConfig() {
-            const config = {
-                numQuestions: currentConfig.numQuestions,
-                numAlternatives: currentConfig.numAlternatives,
-                correctAnswers: Object.values(currentConfig.answers).join('')
-            };
-            
-            localStorage.setItem('legab_config', JSON.stringify(config));
-            
-            alert('Configurações salvas! Agora vá para o Scanner para usar.');
+            localStorage.setItem('legab_config', JSON.stringify(currentConfig));
+            console.log('Config salva locally');
         }
 
-        // Inicializa
+        window.saveConfig = saveConfig;
+        window.getCurrentConfig = getCurrentConfig;
+
         init();
     </script>
 </body>
