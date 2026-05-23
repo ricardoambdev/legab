@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>LeGab - Scanner</title>
     <link rel="manifest" href="manifest.json">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
@@ -12,17 +12,17 @@
 <body>
     <div class="app-container">
         <header class="md-header">
-            <h1 class="md-title">LeGab</h1>
+            <h1>LeGab</h1>
             <nav class="md-nav">
-                <a href="index.html" class="md-nav-item active">
+                <a href="index.html" class="active">
                     <span class="material-icons">qr_code_scanner</span>
                     <span>Scanner</span>
                 </a>
-                <a href="generate.html" class="md-nav-item">
+                <a href="generate.html">
                     <span class="material-icons">add_box</span>
                     <span>Gerar</span>
                 </a>
-                <a href="config.html" class="md-nav-item">
+                <a href="config.html">
                     <span class="material-icons">settings</span>
                     <span>Config</span>
                 </a>
@@ -31,70 +31,37 @@
 
         <main class="md-main">
             <div class="md-card">
-                <h2 class="md-card-title">Escanear Gabarito</h2>
+                <h2>Corrigir Gabarito</h2>
+                <p class="md-hint">Escolha como enviar o gabarito</p>
 
-                <div class="scanner-container">
-                    <video id="video" class="scanner-video" autoplay playsinline></video>
-                    <canvas id="canvas" class="scanner-canvas"></canvas>
-                    <div id="scanner-overlay" class="scanner-overlay">
-                        <div class="scanner-frame"></div>
-                    </div>
-                </div>
-
-                <div class="scanner-controls">
-                    <button id="btn-start" class="md-btn md-btn-primary">
-                        <span class="material-icons">camera_alt</span>
-                        Iniciar Câmera
+                <div class="capture-options">
+                    <button id="btn-upload" class="capture-btn">
+                        <span class="material-icons">upload</span>
+                        <strong>Enviar Foto</strong>
+                        <small>Da galeria ou câmera</small>
                     </button>
-                    <button id="btn-capture" class="md-btn md-btn-primary hidden">
+                    <button id="btn-camera" class="capture-btn">
                         <span class="material-icons">photo_camera</span>
-                        Capturar
-                    </button>
-                    <button id="btn-stop" class="md-btn md-btn-outline hidden">
-                        <span class="material-icons">stop</span>
-                        Parar
+                        <strong>Tirar Foto</strong>
+                        <small>Usar a câmera</small>
                     </button>
                 </div>
+
+                <input type="file" id="file-input" accept="image/*" capture="environment" hidden>
             </div>
 
-            <div id="debug-section" class="md-card hidden">
-                <h3 class="md-card-subtitle">Debug</h3>
-                <div id="debug-log" class="debug-log"></div>
-            </div>
-
-            <div class="md-card">
-                <h3 class="md-card-title">Ou digite as respostas</h3>
-                <div class="md-field">
-                    <label>Respostas (ex: ABCDED...)</label>
-                    <input type="text" id="manual-answers" class="md-input" placeholder="Digite as respostas..." maxlength="65">
-                </div>
-                <button id="btn-check" class="md-btn md-btn-primary" style="width: 100%;">
-                    <span class="material-icons">check</span>
-                    Verificar
-                </button>
-            </div>
-
-            <div id="result-section" class="md-card hidden">
-                <div class="result-card">
-                    <h2 class="result-title">Resultado</h2>
-                    <div class="result-stats">
-                        <div class="stat correct">
-                            <span class="stat-value" id="correct-count">0</span>
-                            <span class="stat-label">Acertos</span>
-                        </div>
-                        <div class="stat wrong">
-                            <span class="stat-value" id="wrong-count">0</span>
-                            <span class="stat-label">Erros</span>
-                        </div>
-                        <div class="stat blank">
-                            <span class="stat-value" id="blank-count">0</span>
-                            <span class="stat-label">Brancas</span>
-                        </div>
-                    </div>
-                    <div class="result-score">
-                        <span class="score-value" id="score-percent">0%</span>
-                    </div>
-                    <div id="pass-fail" class="pass-fail"></div>
+            <div id="preview-section" class="md-card hidden">
+                <h3>Visualização</h3>
+                <img id="image-preview" class="preview-image" alt="Preview">
+                <div class="preview-actions">
+                    <button id="btn-retry" class="md-btn md-btn-outline">
+                        <span class="material-icons">refresh</span>
+                        Tentar Novamente
+                    </button>
+                    <button id="btn-process" class="md-btn md-btn-primary">
+                        <span class="material-icons">check</span>
+                        Processar
+                    </button>
                 </div>
             </div>
 
@@ -105,10 +72,42 @@
                 </div>
             </div>
 
+            <div id="manual-section" class="md-card">
+                <h3>Ou digite as respostas</h3>
+                <div class="md-field">
+                    <label>Respostas (ex: ABCDED)</label>
+                    <input type="text" id="manual-answers" class="md-input" placeholder="Digite as respostas..." maxlength="65">
+                </div>
+                <button id="btn-check" class="md-btn md-btn-primary md-btn-block">
+                    <span class="material-icons">check</span>
+                    Verificar
+                </button>
+            </div>
+
+            <div id="result-section" class="md-card hidden">
+                <h3>Resultado</h3>
+                <div class="result-stats">
+                    <div class="stat correct">
+                        <span class="stat-value" id="correct-count">0</span>
+                        <span class="stat-label">Acertos</span>
+                    </div>
+                    <div class="stat wrong">
+                        <span class="stat-value" id="wrong-count">0</span>
+                        <span class="stat-label">Erros</span>
+                    </div>
+                    <div class="stat blank">
+                        <span class="stat-value" id="blank-count">0</span>
+                        <span class="stat-label">Branco</span>
+                    </div>
+                </div>
+                <div class="result-score">
+                    <span class="score-value" id="score-percent">0%</span>
+                </div>
+                <div id="pass-fail" class="pass-fail"></div>
+            </div>
+
             <div class="md-card config-mini">
-                <p>Questões: <strong id="config-questions">-</strong> |
-                   Alternativas: <strong id="config-alternatives">-</strong></p>
-                <div id="debug-status" class="debug-status"></div>
+                <p>Questões: <strong id="config-questions">6</strong> | Alternativas: <strong id="config-alternatives">5</strong></p>
             </div>
         </main>
     </div>

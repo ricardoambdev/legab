@@ -65,10 +65,10 @@
 
                 const w = window.open('', '_blank');
                 const answers = showAnswers ? config.correctAnswers : '';
-                const numQ = config.numQuestions || 65;
+                const numQ = config.numQuestions || 6;
                 const numA = config.numAlternatives || 5;
-                const left = config.leftColumn || 33;
-                const right = config.rightColumn || 32;
+                const left = config.leftColumn || Math.ceil(numQ / 2);
+                const right = config.rightColumn || Math.floor(numQ / 2);
                 const school = config.schoolName || 'Simulado Trimestral';
                 const logo = config.logoUrl || '';
                 const opts = 'ABCDE'.substring(0, numA);
