@@ -1,122 +1,171 @@
 /**
  * Gerador de Folhas de Resposta
- * Gera folhas A4 em PDF para impressão
+ * Gera folhas A4 profissionais para OMR
  */
 class SheetGenerator {
-  static A4_W = 210; // mm
+  static A4_W = 210;
   static A4_H = 297;
+  static COLORS = { primary: [255, 109, 0], dark: [40, 40, 40], gray: [100, 100, 100], light: [120, 120, 120], white: [255, 255, 255], green: [46, 125, 50], border: [80, 80, 80] };
+  static M = 12; // margem
 
-  static generate(questions = 60, alternatives = 5, answers = {}) {
+  static generate(questions = 60, alternatives = 5, answers = {}, title = 'Simulado Trimestral') {
     const doc = new window.jspdf.jsPDF('p', 'mm', 'a4');
-    const { A4_W, A4_H } = this;
-    const M = 15; // margin
+    const { A4_W, A4_H, M, COLORS } = this;
+    const perCol = Math.ceil(questions / 3);
     const letters = 'ABCDE'.substring(0, alternatives);
+    const today = new Date().toLocaleDateString('pt-BR');
+    const lineH = 4.2;
 
-    // Cabeçalho
-    doc.setFillColor(255, 109, 0);
-    doc.rect(0, 0, A4_W, 25, 'F');
+    // === CABEÇALHO ===
+    doc.setFillColor(...COLORS.primary);
+    doc.rect(0, 0, A4_W, 28, 'F');
 
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(16);
+    doc.setTextColor(...COLORS.white);
+    doc.setFontSize(18);
     doc.setFont('helvetica', 'bold');
-    doc.text('FOLHA DE RESPOSTAS', A4_W / 2, 14, { align: 'center' });
-    doc.setFontSize(10);
-    doc.text('Simulado Trimestral', A4_W / 2, 20, { align: 'center' });
+    doc.text('FOLHA DE RESPOSTAS', A4_W / 2, 12, { align: 'center' });
 
-    // Informações do aluno
-    doc.setTextColor(60, 60, 60);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text(title, A4_W / 2, 20, { align: 'center' });
+
+    // === DADOS DO ALUNO ===
+    let y = 36;
+    doc.setTextColor(...COLORS.dark);
     doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
-    doc.text('NOME: _______________________________________________', M, 34);
-    doc.text('SÉRIE: _______________     DATA: ____/____/________', M, 40);
 
-    // Instruções
+    // Nome
+    doc.text('NOME:', M, y);
+    doc.setDrawColor(...COLORS.border);
+    doc.setLineWidth(0.3);
+    doc.line(M + 15, y + 1.5, A4_W - M, y + 1.5);
+
+    // Série e Data
+    y += 9;
+    doc.text('SÉRIE:', M, y);
+    doc.line(M + 15, y + 1.5, 80, y + 1.5);
+
+    doc.text('DATA:', 95, y);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...COLORS.dark);
+    doc.text(today, 112, y);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...COLORS.dark);
+    doc.line(112, y + 1.5, A4_W - M, y + 1.5);
+
+    // === INSTRUÇÕES ===
+    y += 10;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.text('INSTRUÇÕES:', M, y);
+
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(7);
-    doc.setTextColor(120, 120, 120);
+    doc.setTextColor(...COLORS.light);
     const instr = [
-      'Assinale apenas uma resposta para cada questão.',
-      'Utilize apenas caneta azul ou preta.',
-      'Não rasure ou amasse esta folha de resposta.',
-      'Questões em branco ou com mais de uma alternativa assinalada serão desconsideradas.'
+      'Assinale apenas UMA alternativa para cada questão.',
+      'Utilize caneta azul ou preta. Preencha completamente a bolha.',
+      'Não rasure, não amasse e não faça marcas fora das bolhas.',
+      'Questões com mais de uma marcação ou em branco serão zeradas.'
     ];
-    let iy = 48;
-    instr.forEach(t => {
-      doc.text(t, M, iy);
-      iy += 3.5;
+    instr.forEach((t, i) => {
+      doc.text((i + 1) + '. ' + t, M + 4, y + 4 + i * 4);
     });
 
-    // Grid de respostas
-    const cols = 3;
-    const perCol = Math.ceil(questions / cols);
-    const startY = 60;
-    const availableW = A4_W - M * 2;
-    const colW = availableW / cols;
-    const bubbleR = 3;
-    const altGap = colW / (alternatives + 1);
+    // === LINHA SEPARADORA ===
+    y += 4 + instr.length * 4 + 2;
+    doc.setDrawColor(...COLORS.primary);
+    doc.setLineWidth(0.5);
+    doc.line(M, y, A4_W - M, y);
 
+    // === CABEÇALHO DAS COLUNAS ===
+    y += 4;
     doc.setFontSize(7);
-    doc.setFont('helvetica', 'normal');
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...COLORS.dark);
+    const colW = (A4_W - M * 2) / 3;
+    for (let c = 0; c < 3; c++) {
+      const cx = M + c * colW + colW/2;
+      doc.text(`QUESTÕES ${c*perCol+1}-${Math.min((c+1)*perCol, questions)}`, cx, y, { align: 'center' });
+    }
 
-    for (let c = 0; c < cols; c++) {
+    // === GRID DE BOLHAS ===
+    y += 4;
+    const gridStartY = y;
+    const bubbleR = 3.2;
+    const altSpan = colW / (alternatives + 1);
+
+    for (let c = 0; c < 3; c++) {
       const x0 = M + c * colW + 8;
 
       for (let q = 0; q < perCol; q++) {
         const num = c * perCol + q + 1;
         if (num > questions) break;
 
-        const y0 = startY + q * 7.8;
+        const qy = gridStartY + q * 7.8;
+
+        // Fundo alternado para legibilidade
+        if (q % 2 === 0) {
+          doc.setFillColor(247, 247, 247);
+          doc.rect(M + c * colW + 1, qy - 1.5, colW - 2, 7.1, 'F');
+        }
 
         // Número da questão
         doc.setTextColor(60, 60, 60);
         doc.setFont('helvetica', 'bold');
-        doc.text(String(num).padStart(2, '0') + '.', x0 - 6, y0 + 3.5, { align: 'right' });
+        doc.setFontSize(7);
+        doc.text(num.toString(), x0 - 5, qy + 3, { align: 'right' });
 
-        // Bolhas das alternativas
+        // Bolhas
         for (let a = 0; a < alternatives; a++) {
-          const letter = letters[a];
-          const cx = x0 + a * altGap + altGap / 2;
-          const cy = y0;
+          const cx = x0 + a * altSpan + altSpan/2;
+          const cy = qy + 0.5;
 
-          // Círculo
-          doc.setDrawColor(80, 80, 80);
-          doc.setLineWidth(0.4);
-
-          // Preenchimento se for resposta correta
-          if (answers[num] === letter) {
-            doc.setFillColor(76, 175, 80);
-            doc.circle(cx, cy + 1.5, bubbleR, 'FD');
-            doc.setTextColor(255, 255, 255);
-            doc.setFontSize(6);
-            doc.text(letter, cx, cy + 3, { align: 'center' });
+          if (answers[num] === letters[a]) {
+            // Preenchida (gabarito)
+            doc.setFillColor(...COLORS.green);
+            doc.setDrawColor(...COLORS.green);
+            doc.circle(cx, cy, bubbleR, 'FD');
+            doc.setTextColor(...COLORS.white);
             doc.setFontSize(7);
+            doc.setFont('helvetica', 'bold');
+            doc.text(letters[a], cx, cy + 0.8, { align: 'center' });
           } else {
-            doc.setFillColor(255, 255, 255);
-            doc.circle(cx, cy + 1.5, bubbleR, 'FD');
-            doc.setTextColor(100, 100, 100);
-            doc.setFontSize(6);
-            doc.text(letter, cx, cy + 3, { align: 'center' });
-            doc.setFontSize(7);
+            // Vazia
+            doc.setDrawColor(80, 80, 80);
+            doc.setLineWidth(0.5);
+            doc.circle(cx, cy, bubbleR, 'S');
+            doc.setTextColor(...COLORS.light);
+            doc.setFontSize(6.5);
+            doc.setFont('helvetica', 'normal');
+            doc.text(letters[a], cx, cy + 0.5, { align: 'center' });
           }
         }
       }
     }
 
-    // Rodapé
+    // === RODAPÉ ===
+    const footerY = A4_H - 10;
+    doc.setDrawColor(...COLORS.primary);
+    doc.setLineWidth(0.3);
+    doc.line(M, footerY - 4, A4_W - M, footerY - 4);
+
     doc.setTextColor(160, 160, 160);
-    doc.setFontSize(7);
-    doc.text('LeGab - Sistema de Correção Automática - www.legab.com.br', A4_W / 2, A4_H - 10, { align: 'center' });
+    doc.setFontSize(6);
+    doc.setFont('helvetica', 'normal');
+    doc.text('LeGab - Sistema de Correção Automática de Gabaritos', A4_W / 2, footerY, { align: 'center' });
 
     return doc;
   }
 
-  static generateBlank(questions, alternatives) {
-    const doc = this.generate(questions, alternatives, {});
-    doc.save('folha-respostas-vazia.pdf');
+  static generateBlank(questions, alternatives, title) {
+    const doc = this.generate(questions, alternatives, {}, title || 'Simulado Trimestral');
+    doc.save('folha-respostas.pdf');
   }
 
-  static generateFilled(questions, alternatives, answers) {
-    const doc = this.generate(questions, alternatives, answers);
+  static generateFilled(questions, alternatives, answers, title) {
+    const doc = this.generate(questions, alternatives, answers, title || 'Simulado Trimestral - Gabarito');
     doc.save('gabarito-preenchido.pdf');
   }
 }

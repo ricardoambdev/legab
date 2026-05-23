@@ -32,6 +32,10 @@
 
       <div class="form-row">
         <div class="form-group">
+          <label class="form-label">Título da Prova</label>
+          <input type="text" id="title" class="form-input" value="Simulado Trimestral">
+        </div>
+        <div class="form-group">
           <label class="form-label">Questões</label>
           <input type="number" id="questions" class="form-input" value="60" min="1" max="120">
         </div>
@@ -40,39 +44,44 @@
           <select id="alternatives" class="form-select">
             <option value="5">5 (A-E)</option>
             <option value="4">4 (A-D)</option>
-            <option value="3">3 (A-C)</option>
           </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Título</label>
-          <input type="text" id="title" class="form-input" value="Simulado Trimestral">
         </div>
       </div>
 
       <div class="form-group">
-        <label class="form-label">Gabarito (opcional - p/ folha preenchida)</label>
-        <input type="text" id="key" class="form-input" placeholder="Ex: ABCDEABCDE... (uma letra por questão)" maxlength="120" style="font-family:monospace;letter-spacing:4px">
+        <label class="form-label">Gabarito (uma letra por questão - opcional)</label>
+        <input type="text" id="key" class="form-input" placeholder="ABCABCD..." maxlength="120" style="font-family:monospace;letter-spacing:4px;font-size:14px">
+        <small style="color:#999">Preencha apenas se quiser gerar a folha gabarito preenchida.</small>
       </div>
 
       <div class="btn-group mt-16">
         <button class="btn btn-primary" onclick="generateBlank()">
           <span class="material-icons">file_open</span>
-          Folha Vazia
+          Folha de Resposta
         </button>
         <button class="btn btn-outline" onclick="generateFilled()">
           <span class="material-icons">check_circle</span>
           Gabarito Preenchido
         </button>
-        <button class="btn btn-outline" onclick="downloadSheet()">
-          <span class="material-icons">download</span>
-          Baixar PDF
-        </button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <span class="material-icons">preview</span>
+        Pré-visualização
+      </div>
+      <div id="preview" style="display:flex;justify-content:center;position:relative;min-height:200px">
+        <p style="color:#999;text-align:center;margin:40px auto">
+          Gere uma folha para ver a pré-visualização aqui.
+        </p>
       </div>
     </div>
 
     <div class="text-center" style="color:#999;font-size:13px">
-      O gabarito deve ter uma letra por questão (ex: ABCDE...)<br>
-      Salve também em Settings para o scanner corrigir automaticamente.
+      A folha é gerada em formato A4 (210x297mm) com:<br>
+      3 colunas, 60 questões, círculos OMR, espaço para nome e série.<br>
+      A data de impressão é preenchida automaticamente.
     </div>
   </main>
 
@@ -82,52 +91,48 @@
     let lastDoc = null;
 
     function getConfig() {
-      return {
-        questions: parseInt(document.getElementById('questions').value) || 60,
-        alternatives: parseInt(document.getElementById('alternatives').value) || 5,
-        title: document.getElementById('title').value || 'Simulado',
-        key: document.getElementById('key').value || ''
-      };
-    }
-
-    function buildAnswers(key, questions) {
+      const key = document.getElementById('key').value.toUpperCase();
+      const questions = parseInt(document.getElementById('questions').value) || 60;
       const answers = {};
       for (let i = 0; i < Math.min(key.length, questions); i++) {
-        answers[i + 1] = key[i].toUpperCase();
+        if ('ABCDE'.includes(key[i])) answers[i + 1] = key[i];
       }
-      return answers;
+      return {
+        title: document.getElementById('title').value || 'Simulado Trimestral',
+        questions,
+        alternatives: parseInt(document.getElementById('alternatives').value) || 5,
+        answers
+      };
     }
 
     function generateBlank() {
       const { questions, alternatives, title } = getConfig();
-      lastDoc = SheetGenerator.generate(questions, alternatives, {});
-      lastDoc.save('folha-respostas-vazia.pdf');
+      lastDoc = SheetGenerator.generate(questions, alternatives, {}, title);
+      previewDoc(lastDoc);
+      lastDoc.save('folha-respostas.pdf');
     }
 
     function generateFilled() {
-      const { questions, alternatives, title, key } = getConfig();
-      const answers = buildAnswers(key, questions);
-      lastDoc = SheetGenerator.generate(questions, alternatives, answers);
-      lastDoc.save('gabarito-preenchido.pdf');
+      const { questions, alternatives, answers, title } = getConfig();
+      if (Object.keys(answers).length === 0) {
+        alert('Preencha o gabarito antes de gerar a folha preenchida!');
+        return;
+      }
+      lastDoc = SheetGenerator.generate(questions, alternatives, answers, title + ' - Gabarito');
+      previewDoc(lastDoc);
 
-      // Salva gabarito automaticamente
+      // Salva gabarito
       Firebase.init().then(() => {
         Firebase.saveConfig({ questions, alternatives, title, answers });
       });
+
+      lastDoc.save('gabarito-preenchido.pdf');
     }
 
-    async function downloadSheet() {
-      await Firebase.init();
-      const config = await Firebase.loadConfig();
-
-      const answers = config.answers || {};
-      lastDoc = SheetGenerator.generate(
-        config.questions || 60,
-        config.alternatives || 5,
-        answers
-      );
-      const name = (Object.keys(answers).length > 0) ? 'gabarito-preenchido' : 'folha-respostas-vazia';
-      lastDoc.save(name + '.pdf');
+    function previewDoc(doc) {
+      const data = doc.output('datauristring');
+      const container = document.getElementById('preview');
+      container.innerHTML = `<img src="${data}" style="max-width:100%;border:1px solid #ddd;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1)">`;
     }
 
     Firebase.init();
