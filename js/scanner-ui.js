@@ -2,6 +2,15 @@ let stream = null;
 let videoElement = null;
 let isProcessing = false;
 
+// Log visual na tela
+function logScreen(msg) {
+    const logEl = document.getElementById('log-screen');
+    if (logEl) {
+        logEl.textContent = msg;
+        console.log(msg);
+    }
+}
+
 async function startCamera() {
     const statusEl = document.getElementById('camera-status');
     
@@ -130,32 +139,34 @@ async function processOCR(imageData) {
     const statusEl = document.getElementById('camera-status');
     
     try {
-        console.log('🔍 Iniciando OCR...');
+        logScreen('🔍 Passo 1/4: Iniciando OCR...');
         if (statusEl) statusEl.textContent = '🔍 Carregando OCR...';
         
         const worker = await Tesseract.createWorker('eng');
         
-        console.log('📖 Lendo texto...');
+        logScreen('📖 Passo 2/4: Lendo imagem...');
         if (statusEl) statusEl.textContent = '📖 Lendo gabarito...';
         
         const { data: { text } } = await worker.recognize(imageData);
         
         await worker.terminate();
         
+        logScreen('📝 Texto lido: ' + (text.length > 50 ? text.substring(0, 50)+'...' : text));
         console.log('📝 Texto OCR:', text);
         console.log('✅ OCR finalizado!');
         
         if (statusEl) statusEl.textContent = '✅ Texto lido!';
         
-        // Extrai respostas e já verifica
         extractAndCheck(text);
         
     } catch (error) {
         console.error('❌ Erro OCR:', error);
+        logScreen('❌ Erro OCR: ' + error.message);
         if (statusEl) statusEl.textContent = '❌ Erro OCR: ' + error.message;
         alert('Erro no OCR: ' + error.message);
         isProcessing = false;
     }
+}
 }
 
 function extractAndCheck(text) {
