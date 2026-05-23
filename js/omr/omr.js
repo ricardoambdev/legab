@@ -1,6 +1,5 @@
 /**
  * Módulo OMR (Optical Mark Recognition)
- * Detecta e lê marcações de gabarito com alta precisão
  */
 class OMRModule {
     constructor(config = {}) {
@@ -9,102 +8,78 @@ class OMRModule {
             alternativesPerQuestion: config.alternativesPerQuestion || 5,
             columns: config.columns || 2,
             fillThreshold: config.fillThreshold || 0.35,
-            minMarkCoverage: config.minMarkCoverage || 0.25,
-            bubbleRows: config.bubbleRows || 30,
             ...config
         };
         
         this.bubbleGrid = null;
-        this.debug = config.debug || false;
         this.alternativeLetters = 'ABCDE';
-        console.log('OMR Config:', this.config);
     }
 
     /**
-     * Gera grid de bolhas baseado nas dimensões do gabarito
+     * Gera grid de bolhas
      */
     generateBubbleGrid(width, height) {
         const { numQuestions, alternativesPerQuestion, columns } = this.config;
         
-        console.log(`Gerando grid: ${width}x${height}, ${numQuestions} questoes, ${columns} colunas`);
-        
         const questionsPerColumn = Math.ceil(numQuestions / columns);
         const columnWidth = width / columns;
-        const totalRows = questionsPerColumn;
+        const bubbleWidth = columnWidth / alternativesPerQuestion / 2.5;
+        const bubbleHeight = height / (questionsPerColumn * alternativesPerQuestion * 1.5);
         
-        // Calcula tamanho das bolhas
-        const bubbleWidth = columnWidth / alternativesPerQuestion / 2; // Metade do espaço
-        const bubbleHeight = height / (totalRows * alternativesPerQuestion * 2); // Espaço vertical
-        
-        const grid = [];
+        this.bubbleGrid = [];
         
         for (let col = 0; col < columns; col++) {
-            const colStartX = (col * columnWidth) + (columnWidth * 0.2); // 20% margem esquerda
-            const colWidth2 = columnWidth * 0.6; // 60% da largura da coluna
+            const baseX = col * columnWidth;
             
             for (let q = 0; q < questionsPerColumn; q++) {
                 const questionNum = col * questionsPerColumn + q + 1;
                 if (questionNum > numQuestions) break;
                 
                 const questionBubbles = [];
-                const questionStartY = (q * alternativesPerQuestion * bubbleHeight * 2) + (height * 0.05);
+                const baseY = q * bubbleHeight * alternativesPerQuestion * 1.5;
                 
                 for (let alt = 0; alt < alternativesPerQuestion; alt++) {
-                    const x = colStartX + (alt * (colWidth2 / alternativesPerQuestion));
-                    const y = questionStartY + (alt * bubbleHeight * 0.3);
-                    const w = bubbleWidth * 0.8;
-                    const h = bubbleHeight * 0.6;
+                    const x = baseX + (columnWidth * 0.15) + (alt * bubbleWidth * 1.2);
+                    const y = baseY + (q > 0 ? bubbleHeight * 0.3 : 0);
                     
                     questionBubbles.push({
                         question: questionNum,
                         alternative: this.alternativeLetters[alt] || String.fromCharCode(65 + alt),
-                        x: Math.max(0, x),
-                        y: Math.max(0, y),
-                        w: Math.max(1, w),
-                        h: Math.max(1, h),
+                        x: Math.floor(x),
+                        y: Math.floor(y),
+                        w: Math.floor(bubbleWidth),
+                        h: Math.floor(bubbleHeight * 0.6),
                         filled: false,
                         confidence: 0
                     });
                 }
                 
-                if (questionBubbles.length > 0) {
-                    grid.push(questionBubbles);
-                }
+                this.bubbleGrid.push(questionBubbles);
             }
         }
         
-        this.bubbleGrid = grid;
-        console.log('Grid gerado:', grid.length, 'questões');
-        return grid;
+        return this.bubbleGrid;
     }
 
     /**
-     * Detecta marcações em uma bolha específica
+     * Detecta marcação em uma bolha
      */
     detectBubbleMark(src, bubble) {
+        if (!bubble || !src || src.empty()) {
+            return { filled: false, confidence: 0, fillPercentage: 0 };
+        }
+        
         try {
-            if (!bubble || !src) {
+            const x = Math.max(0, Math.floor(bubble.x));
+            const y = Math.max(0, Math.floor(bubble.y));
+            const w = Math.min(bubble.w, src.cols - x);
+            const h = Math.min(bubble.h, src.rows - y);
+            
+            if (w <= 0 || h <= 0) {
                 return { filled: false, confidence: 0, fillPercentage: 0 };
             }
             
-            const { x, y, w, h } = bubble;
-            
-            // Verifica limites
-            if (x < 0 || y < 0 || w <= 0 || h <= 0) {
-                return { filled: false, confidence: 0, fillPercentage: 0 };
-            }
-            
-            const rectWidth = Math.min(Math.floor(w), src.cols - Math.floor(x));
-            const rectHeight = Math.min(Math.floor(h), src.rows - Math.floor(y));
-            
-            if (rectWidth <= 0 || rectHeight <= 0) {
-                return { filled: false, confidence: 0, fillPercentage: 0 };
-            }
-            
-            const roi = src.roi(
-                new cv.Rect(Math.floor(x), Math.floor(y), rectWidth, rectHeight)
-            );
-            
+            const roi = src.roi(new cv.Rect(x, y, w, h));
             if (roi.empty()) {
                 roi.delete();
                 return { filled: false, confidence: 0, fillPercentage: 0 };
@@ -120,43 +95,36 @@ class OMRModule {
                 confidence: fillPercentage,
                 fillPercentage
             };
-        } catch (error) {
-            console.error('Erro detectando bolha:', error);
+        } catch (e) {
             return { filled: false, confidence: 0, fillPercentage: 0 };
         }
     }
 
     /**
-     * Processa todas as bolhas e retorna respostas
+     * Processa imagem e retorna respostas
      */
     processImage(src) {
-        console.log('Processando imagem:', src.cols, 'x', src.rows);
-        
-        if (src.empty()) {
-            console.error('Imagem vazia!');
+        if (!src || src.empty()) {
+            console.error('Imagem inválida');
             return [];
         }
 
-        const results = [];
-        
-        // Gera grid baseado no tamanho da imagem
+        // Gera grid se necessário
         if (!this.bubbleGrid || this.bubbleGrid.length === 0) {
             this.generateBubbleGrid(src.cols, src.rows);
         }
         
-        console.log('Processando', this.bubbleGrid.length, 'questões');
+        const results = [];
         
-        for (let i = 0; i < this.bubbleGrid.length; i++) {
-            const questionBubbles = this.bubbleGrid[i];
+        for (const questionBubbles of this.bubbleGrid) {
             const questionResults = {
-                question: i + 1,
+                question: questionBubbles[0]?.question || 1,
                 answers: [],
                 selected: null,
                 confidence: 0
             };
             
             let maxConfidence = 0;
-            let selectedAlt = null;
             
             for (const bubble of questionBubbles) {
                 const detection = this.detectBubbleMark(src, bubble);
@@ -164,48 +132,38 @@ class OMRModule {
                 questionResults.answers.push({
                     alternative: bubble.alternative,
                     filled: detection.filled,
-                    confidence: detection.confidence,
-                    fillPercentage: detection.fillPercentage
+                    confidence: detection.confidence
                 });
                 
                 if (detection.confidence > maxConfidence) {
                     maxConfidence = detection.confidence;
-                    selectedAlt = bubble.alternative;
+                    questionResults.selected = bubble.alternative;
                 }
             }
             
-            questionResults.selected = selectedAlt;
             questionResults.confidence = maxConfidence;
-            
             results.push(questionResults);
         }
         
-        console.log('Processamento concluído:', results.length, 'questões');
         return results;
     }
 
     /**
-     * Extrai respostas do processamento
+     * Extrai respostas
      */
-    extractAnswers(omrResults) {
-        const answers = [];
-        
-        for (const result of omrResults) {
-            answers.push({
-                question: result.question,
-                answer: result.selected || '',
-                confidence: result.confidence,
-                allOptions: result.answers
-            });
-        }
-        
-        return answers;
+    extractAnswers(results) {
+        return results.map(r => ({
+            question: r.question,
+            answer: r.selected || '',
+            confidence: r.confidence
+        }));
     }
 
     /**
-     * Compara respostas com gabarito
+     * Compara com gabarito
      */
     compareWithKey(answers, correctAnswers) {
+        const correctStr = (correctAnswers || '').toString().toUpperCase();
         const results = {
             total: answers.length,
             correct: 0,
@@ -215,31 +173,20 @@ class OMRModule {
             details: []
         };
         
-        const correctStr = typeof correctAnswers === 'string' ? correctAnswers : correctAnswers.join('');
-        const correctArr = correctStr.toUpperCase().split('');
-        
         for (let i = 0; i < answers.length; i++) {
-            const userAnswer = answers[i];
-            const correct = correctArr[i] || '';
+            const userAnswer = (answers[i].answer || '').toUpperCase();
+            const correct = correctStr[i] || '';
             
             const detail = {
-                question: userAnswer.question,
-                userAnswer: (userAnswer.answer || '').toUpperCase(),
+                question: answers[i].question,
+                userAnswer,
                 correctAnswer: correct,
-                isCorrect: (userAnswer.answer || '').toUpperCase() === correct,
-                confidence: userAnswer.confidence
+                status: !userAnswer ? 'blank' : (userAnswer === correct ? 'correct' : 'wrong')
             };
             
-            if (!userAnswer.answer || userAnswer.answer === '') {
-                results.blank++;
-                detail.status = 'blank';
-            } else if ((userAnswer.answer || '').toUpperCase() === correct) {
-                results.correct++;
-                detail.status = 'correct';
-            } else {
-                results.wrong++;
-                detail.status = 'wrong';
-            }
+            if (!userAnswer) results.blank++;
+            else if (userAnswer === correct) results.correct++;
+            else results.wrong++;
             
             results.details.push(detail);
         }
@@ -248,14 +195,6 @@ class OMRModule {
             Math.round((results.correct / results.total) * 100) : 0;
         
         return results;
-    }
-
-    /**
-     * Recalibra grid para novo tamanho
-     */
-    recalibrate(width, height) {
-        this.bubbleGrid = null;
-        return this.generateBubbleGrid(width, height);
     }
 }
 
