@@ -10,117 +10,129 @@
     <link rel="stylesheet" href="css/material.css">
 </head>
 <body>
-    <div class="app-container">
-        <header class="md-header">
-            <h1>LeGab</h1>
+    <header class="md-header">
+        <div class="header-content">
+            <div class="logo">
+                <span class="material-icons">qr_code_scanner</span>
+                <h1>LeGab</h1>
+            </div>
             <nav class="md-nav">
-                <a href="index.html" class="active">
+                <a href="index.html" class="active" data-tooltip="Scanner">
                     <span class="material-icons">qr_code_scanner</span>
-                    <span>Scanner</span>
                 </a>
-                <a href="generate.html">
+                <a href="generate.html" data-tooltip="Gerar">
                     <span class="material-icons">add_box</span>
-                    <span>Gerar</span>
                 </a>
-                <a href="config.html">
+                <a href="config.html" data-tooltip="Config">
                     <span class="material-icons">settings</span>
-                    <span>Config</span>
                 </a>
             </nav>
-        </header>
+        </div>
+    </header>
 
-        <main class="md-main">
-            <div class="md-card scanner-card">
-                <h2>Escanear Gabarito</h2>
-                <p class="md-hint">Aponte a câmera para o gabarito</p>
-
-                <div class="camera-container">
-                    <video id="video" autoplay playsinline muted></video>
-                    <div class="scan-overlay">
-                        <div class="scan-frame">
-                            <div class="corner top-left"></div>
-                            <div class="corner top-right"></div>
-                            <div class="corner bottom-left"></div>
-                            <div class="corner bottom-right"></div>
-                        </div>
-                        <div class="scan-status" id="scan-status">
-                            <span class="status-icon material-icons">searching</span>
-                            <span class="status-text">Procurando gabarito...</span>
-                        </div>
-                    </div>
+    <main class="md-main">
+        <div class="scanner-wrapper">
+            <div class="camera-container">
+                <video id="video" autoplay playsinline muted></video>
+                
+                <!-- Overlay com gradientes -->
+                <div class="camera-overlay"></div>
+                
+                <!-- Marco de digitalização -->
+                <div class="scan-frame">
+                    <div class="corner top-left"></div>
+                    <div class="corner top-right"></div>
+                    <div class="corner bottom-left"></div>
+                    <div class="corner bottom-right"></div>
                     <div class="scan-line"></div>
                 </div>
-
-                <div id="process-section" class="process-section hidden">
-                    <div class="process-info">
-                        <span class="material-icons success-icon">check_circle</span>
-                        <p>Gabarito detectado!</p>
-                        <small>Foram encontradas questões no formato esperado.</small>
-                    </div>
-                    <button id="btn-process" class="md-btn md-btn-primary md-btn-block">
-                        <span class="material-icons">check</span>
-                        Processar Gabarito
-                    </button>
+                
+                <!-- Status da detecção -->
+                <div class="detection-status" id="detection-status">
+                    <span class="status-icon material-icons">searching</span>
+                    <span class="status-text">Procurando gabarito...</span>
                 </div>
-
-                <div class="capture-controls">
-                    <button id="btn-stop" class="md-btn md-btn-outline">
+                
+                <!-- Botões sobrepostos -->
+                <div class="camera-controls">
+                    <button id="btn-stop" class="control-btn" title="Parar câmera">
                         <span class="material-icons">stop</span>
-                        Parar Câmera
                     </button>
-                    <button id="btn-restart" class="md-btn md-btn-primary hidden">
+                    <button id="btn-restart" class="control-btn hidden" title="Reiniciar">
                         <span class="material-icons">refresh</span>
-                        Reiniciar
                     </button>
                 </div>
             </div>
+        </div>
 
-            <div id="loading-section" class="md-card hidden">
-                <div class="loading">
-                    <div class="md-spinner"></div>
-                    <p id="loading-status">Processando...</p>
+        <!-- Card de processamento -->
+        <div id="process-section" class="action-card hidden">
+            <div class="action-content">
+                <div class="action-icon success">
+                    <span class="material-icons">check_circle</span>
                 </div>
-            </div>
-
-            <div id="manual-section" class="md-card">
-                <h3>Ou digite as respostas</h3>
-                <div class="md-field">
-                    <label>Respostas</label>
-                    <input type="text" id="manual-answers" class="md-input" placeholder="Ex: ABCDEF..." maxlength="60">
-                </div>
-                <button id="btn-check" class="md-btn md-btn-primary md-btn-block">
+                <h3>Gabarito Detectado!</h3>
+                <p>O sistema identificou um gabarito. Clique abaixo para processar.</p>
+                <button id="btn-process" class="md-btn md-btn-primary md-btn-block md-btn-large">
                     <span class="material-icons">check</span>
-                    Verificar
+                    Processar Gabarito
                 </button>
             </div>
+        </div>
 
-            <div id="result-section" class="md-card hidden">
-                <h3>Resultado</h3>
-                <div class="result-stats">
-                    <div class="stat correct">
-                        <span class="stat-value" id="correct-count">0</span>
-                        <span class="stat-label">Acertos</span>
-                    </div>
-                    <div class="stat wrong">
-                        <span class="stat-value" id="wrong-count">0</span>
-                        <span class="stat-label">Erros</span>
-                    </div>
-                    <div class="stat blank">
-                        <span class="stat-value" id="blank-count">0</span>
-                        <span class="stat-label">Branco</span>
-                    </div>
-                </div>
-                <div class="result-score">
-                    <span class="score-value" id="score-percent">0%</span>
-                </div>
-                <div id="pass-fail" class="pass-fail"></div>
+        <!-- Loading -->
+        <div id="loading-section" class="md-card hidden">
+            <div class="loading">
+                <div class="md-spinner"></div>
+                <p id="loading-status">Processando...</p>
             </div>
+        </div>
 
-            <div class="md-card config-mini">
-                <p>Questões: <strong id="config-questions">60</strong> | Alternativas: <strong id="config-alternatives">5</strong></p>
+        <!-- Entrada manual -->
+        <div id="manual-section" class="md-card">
+            <h3>Entrada Manual</h3>
+            <div class="md-field">
+                <label>Digite as respostas</label>
+                <input type="text" id="manual-answers" class="md-input" placeholder="Ex: ABCDEF..." maxlength="60">
             </div>
-        </main>
-    </div>
+            <button id="btn-check" class="md-btn md-btn-primary md-btn-block">
+                <span class="material-icons">check</span>
+                Verificar Respostas
+            </button>
+        </div>
+
+        <!-- Resultado -->
+        <div id="result-section" class="md-card hidden">
+            <h3>Resultado</h3>
+            <div class="result-stats">
+                <div class="stat correct">
+                    <span class="stat-value" id="correct-count">0</span>
+                    <span class="stat-label">Acertos</span>
+                </div>
+                <div class="stat wrong">
+                    <span class="stat-value" id="wrong-count">0</span>
+                    <span class="stat-label">Erros</span>
+                </div>
+                <div class="stat blank">
+                    <span class="stat-value" id="blank-count">0</span>
+                    <span class="stat-label">Branco</span>
+                </div>
+            </div>
+            <div class="result-score">
+                <span class="score-value" id="score-percent">0%</span>
+            </div>
+            <div id="pass-fail" class="pass-fail"></div>
+        </div>
+
+        <!-- Info config -->
+        <div class="md-card config-mini">
+            <p>
+                <span class="material-icons" style="vertical-align: middle; font-size: 16px;">info</span>
+                <strong id="config-questions">60</strong> questões | 
+                <strong id="config-alternatives">5</strong> alternativas
+            </p>
+        </div>
+    </main>
 
     <div id="toast" class="md-toast"></div>
 
