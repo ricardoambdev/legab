@@ -21,7 +21,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const btnSaveResult = document.getElementById('btn-save-result');
     const modalClose = document.getElementById('modal-close');
     const processButtonContainer = document.getElementById('process-button-container');
-    const processSection = document.getElementById('process-section');
     const loadingSection = document.getElementById('loading-section');
     const resultModal = document.getElementById('result-modal');
     const manualInput = document.getElementById('manual-answers');
@@ -36,34 +35,59 @@ document.addEventListener('DOMContentLoaded', async () => {
     const dateStr = today.toLocaleDateString('pt-BR');
     document.getElementById('result-date').value = dateStr;
 
+    console.log('Iniciando scanner...');
+    
     // Start camera
     await startCamera();
 
     async function startCamera() {
         try {
+            console.log('Solicitando permissão da câmera...');
             updateStatus('searching', 'Iniciando câmera...');
+            
+            // Stop any existing stream
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
             
             stream = await navigator.mediaDevices.getUserMedia({ 
                 video: { 
                     facingMode: 'environment',
-                    width: { ideal: 1920 },
-                    height: { ideal: 1080 }
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 }
                 },
                 audio: false
             });
             
+            console.log 'Câmera obtida com sucesso!');
+            
             videoElement = document.getElementById('video');
+            if (!videoElement) {
+                throw new Error('Elemento de vídeo não encontrado');
+            }
+            
             videoElement.srcObject = stream;
             
-            await new Promise((resolve) => {
+            // Wait for video to load
+            await new Promise((resolve, reject) => {
                 videoElement.onloadedmetadata = () => {
-                    videoElement.play().then(resolve).catch(resolve);
+                    console.log('Metadados carregados:', videoElement.videoWidth, 'x', videoElement.videoHeight);
+                    resolve();
                 };
+                videoElement.onerror = () => reject(new Error('Erro no vídeo'));
+                setTimeout(resolve, 2000); // Timeout de segurança
             });
             
+            // Play video
+            await videoElement.play();
+            console.log('Vídeo reproduzindo:', videoElement.videoWidth, 'x', videoElement.videoHeight);
+            
+            // Small delay to ensure video is rendering
             await new Promise(resolve => setTimeout(resolve, 500));
             
-            console.log('Câmera iniciada:', videoElement.videoWidth, 'x', videoElement.videoHeight);
+            if (videoElement.videoWidth === 0) {
+                throw new Error('Vídeo com largura zero');
+            }
             
             processButtonContainer.classList.add('hidden');
             btnStop.classList.remove('hidden');
@@ -74,6 +98,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             
             detectionInterval = setInterval(async () => {
                 if (isProcessing || !videoElement || videoElement.readyState !== 4) return;
+                if (videoElement.videoWidth === 0) return;
                 
                 const detected = await detectGabarito();
                 
@@ -83,8 +108,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                     
                     if (detectionCount >= detectionThreshold) {
                         capturedImage = captureFrame();
-                        showProcessButton();
-                        stopDetection();
+                        if (capturedImage) {
+                            showProcessButton();
+                            stopDetection();
+                        }
                     }
                 } else {
                     detectionCount = 0;
@@ -94,8 +121,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             
         } catch (error) {
             console.error('Erro na câmera:', error);
-            showToast('Erro: ' + error.message + '. Use HTTPS ou localhost.', true);
-            updateStatus('error', 'Erro na câmera');
+            let errorMsg = error.message;
+            if (errorMsg.includes('Permission') || errorMsg.includes('NotAllowed')) {
+                errorMsg = 'Permissão de câmera negada. Permita o acesso.';
+            } else if (errorMsg.includes('NotFoundError') || errorMsg.includes('Devices')) {
+                errorMsg = 'Nenhuma câmera encontrada.';
+            }
+            showToast('Erro: ' + errorMsg + ' Use HTTPS ou localhost.', true);
+            updateStatus('error', 'Erro: ' + errorMsg);
         }
     }
 
@@ -108,7 +141,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const ctx = canvas.getContext('2d');
             canvas.width = videoElement.videoWidth;
             canvas.height = videoElement.videoHeight;
-            ctx.drawImage(videoElement, 0, 0);
+            ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
             
             const centerX = Math.floor(canvas.width / 2);
             const centerY = Math.floor(canvas.height / 2);
@@ -189,7 +222,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         canvas.width = videoElement.videoWidth;
         canvas.height = videoElement.videoHeight;
         const ctx = canvas.getContext('2d');
-        ctx.drawImage(videoElement, 0, 0);
+        ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
         
         const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
         console.log('Imagem capturada:', canvas.width, 'x', canvas.height, dataUrl.length, 'bytes');
@@ -229,7 +262,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
         
-        // Save to localStorage
         const results = JSON.parse(localStorage.getItem('legab_results') || '[]');
         results.push({
             student: studentName,
