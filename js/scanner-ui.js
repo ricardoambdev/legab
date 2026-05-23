@@ -29,7 +29,7 @@ async function startCamera() {
         videoElement = document.getElementById('video');
         
         if (!videoElement) {
-            throw new Error('Elemento <video> não encontrado');
+            throw new Error('Elemento não encontrado');
         }
         
         videoElement.srcObject = stream;
@@ -53,7 +53,6 @@ async function startCamera() {
         console.log('✅ Câmera ativa:', videoElement.videoWidth, 'x', videoElement.videoHeight);
         if (statusEl) statusEl.textContent = `✅ Câmera: ${videoElement.videoWidth}x${videoElement.videoHeight}`;
         
-        // Botões
         const btnStop = document.getElementById('btn-stop');
         const btnRestart = document.getElementById('btn-restart');
         const btnCapture = document.getElementById('btn-capture');
@@ -108,18 +107,17 @@ async function captureAndProcess() {
     try {
         if (statusEl) statusEl.textContent = '📸 Capturando...';
         
-        // Captura a imagem
         const canvas = document.createElement('canvas');
         canvas.width = videoElement.videoWidth;
         canvas.height = videoElement.videoHeight;
         const ctx = canvas.getContext('2d');
         ctx.drawImage(videoElement, 0, 0);
         
-        const imageData = canvas.toDataURL('image/jpeg', 0.8);
+        const imageData = canvas.toDataURL('image/jpeg', 0.9);
         console.log('📸 Imagem capturada:', canvas.width, 'x', canvas.height);
         
-        // Mostra preview
-        showPreview(imageData, canvas.width, canvas.height);
+        // Processa OCR automaticamente
+        processOCR(imageData);
         
     } catch (error) {
         console.error('Erro:', error);
@@ -128,27 +126,98 @@ async function captureAndProcess() {
     }
 }
 
-function showPreview(imageData, width, height) {
-    // Cria modal de preview
+async function processOCR(imageData) {
+    const statusEl = document.getElementById('camera-status');
+    
+    try {
+        console.log('🔍 Iniciando OCR...');
+        if (statusEl) statusEl.textContent = '🔍 Carregando OCR...';
+        
+        const worker = await Tesseract.createWorker('eng');
+        
+        console.log('📖 Lendo texto...');
+        if (statusEl) statusEl.textContent = '📖 Lendo gabarito...';
+        
+        const { data: { text } } = await worker.recognize(imageData);
+        
+        await worker.terminate();
+        
+        console.log('📝 Texto OCR:', text);
+        console.log('✅ OCR finalizado!');
+        
+        if (statusEl) statusEl.textContent = '✅ Texto lido!';
+        
+        // Extrai respostas e já verifica
+        extractAndCheck(text);
+        
+    } catch (error) {
+        console.error('❌ Erro OCR:', error);
+        if (statusEl) statusEl.textContent = '❌ Erro OCR: ' + error.message;
+        alert('Erro no OCR: ' + error.message);
+        isProcessing = false;
+    }
+}
+
+function extractAndCheck(text) {
+    console.log('🔍 Extraindo respostas do texto...');
+    
+    // Tenta extrair padrões como: 1A, 1.A, 1-A, 1 A, A1, etc.
+    const lines = text.toUpperCase().split('\n');
+    let answers = '';
+    
+    // Padrão 1: procura por números seguidos de letras (1A, 2B, 3C...)
+    const pattern1 = /(\d+)[.\-\s]*([A-E])/g;
+    let match;
+    let found = false;
+    
+    while ((match = pattern1.exec(text)) !== null) {
+        found = true;
+        answers += match[2]; // pega a letra
+    }
+    
+    // Padrão 2: se não achou, procura apenas letras isoladas
+    if (!found || answers.length < 10) {
+        answers = '';
+        const letterPattern = /[A-E]/g;
+        const letters = text.match(letterPattern);
+        if (letters) {
+            answers = letters.join('');
+        }
+    }
+    
+    console.log('Respostas extraídas:', answers);
+    console.log('Tamanho:', answers.length);
+    
+    // Mostra modal com resultado
+    showExtractionResult(answers, text);
+}
+
+function showExtractionResult(answers, fullText) {
     const modal = document.createElement('div');
-    modal.id = 'preview-modal';
+    modal.id = 'extraction-modal';
     modal.className = 'modal-overlay';
     modal.innerHTML = `
         <div class="modal-content" style="max-width:600px">
             <div class="modal-header">
-                <h2>Visualizar</h2>
+                <h2>Respostas Detectadas</h2>
                 <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                     <span class="material-icons">close</span>
                 </button>
             </div>
             <div class="modal-body">
-                <img src="${imageData}" style="width:100%;border-radius:8px;margin-bottom:16px">
-                <p style="color:#666;margin-bottom:16px">Resolução: ${width}x${height}</p>
-                <button id="btn-process-now" class="md-btn md-btn-primary md-btn-block">
-                    <span class="material-icons">text_recognition</span>
-                    Processar com OCR
+                <div class="md-field">
+                    <label>Respostas (edite se necessário)</label>
+                    <input type="text" id="extracted-answers" class="md-input" value="${answers}" placeholder="Ex: ABCDE...">
+                </div>
+                <div style="background:#f5f5f5;padding:12px;border-radius:8px;margin:16px 0;max-height:150px;overflow-y:auto">
+                    <small style="color:#666">Texto completo lido:</small>
+                    <pre style="margin:4px 0 0;white-space:pre-wrap;font-size:11px;font-family:monospace">${fullText.substring(0, 500)}${fullText.length > 500 ? '...' : ''}</pre>
+                </div>
+                <button id="btn-confirm" class="md-btn md-btn-primary md-btn-block">
+                    <span class="material-icons">check</span>
+                    Verificar Respostas
                 </button>
-                <button id="btn-retake" class="md-btn md-btn-outline md-btn-block" style="margin-top:8px">
+                <button id="btn-retry-ocr" class="md-btn md-btn-outline md-btn-block" style="margin-top:8px">
                     <span class="material-icons">refresh</span>
                     Tentar Novamente
                 </button>
@@ -158,112 +227,60 @@ function showPreview(imageData, width, height) {
     
     document.body.appendChild(modal);
     
-    document.getElementById('btn-process-now').onclick = () => processOCR(imageData);
-    document.getElementById('btn-retake').onclick = () => {
+    document.getElementById('btn-confirm').onclick = () => {
+        const answersInput = document.getElementById('extracted-answers').value.toUpperCase().replace(/[^A-E]/g, '');
+        checkAnswers(answersInput);
+    };
+    
+    document.getElementById('btn-retry-ocr').onclick = () => {
         modal.remove();
         isProcessing = false;
-    };
-}
-
-async function processOCR(imageData) {
-    const statusEl = document.getElementById('camera-status');
-    
-    try {
-        if (statusEl) statusEl.textContent = '🔍 Carregando OCR...';
-        
-        // Carrega Tesseract
-        const worker = await Tesseract.createWorker('por');
-        
-        if (statusEl) statusEl.textContent = '📖 Lendo texto...';
-        
-        const { data: { text } } = await worker.recognize(imageData);
-        
-        await worker.terminate();
-        
-        console.log('📝 Texto OCR:', text);
-        
-        if (statusEl) statusEl.textContent = '✅ Texto lido!';
-        
-        // Mostra resultado
-        showOCRResult(text);
-        
-    } catch (error) {
-        console.error('Erro OCR:', error);
-        if (statusEl) statusEl.textContent = '❌ Erro OCR: ' + error.message;
-        alert('Erro no OCR: ' + error.message);
-    }
-}
-
-function showOCRResult(text) {
-    const modal = document.createElement('div');
-    modal.id = 'result-modal';
-    modal.className = 'modal-overlay';
-    modal.innerHTML = `
-        <div class="modal-content" style="max-width:600px">
-            <div class="modal-header">
-                <h2>Resultado OCR</h2>
-                <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
-                    <span class="material-icons">close</span>
-                </button>
-            </div>
-            <div class="modal-body">
-                <div style="background:#f5f5f5;padding:16px;border-radius:8px;margin-bottom:16px;max-height:200px;overflow-y:auto">
-                    <pre style="margin:0;white-space:pre-wrap;font-family:monospace;font-size:12px">${text || '(nenhum texto detectado)'}</pre>
-                </div>
-                <div class="md-field">
-                    <label>Respostas Detectadas</label>
-                    <input type="text" id="detected-answers" class="md-input" value="" placeholder="Cole aqui ou digite manualmente">
-                </div>
-                <button id="btn-check-manual" class="md-btn md-btn-primary md-btn-block">
-                    <span class="material-icons">check</span>
-                    Verificar
-                </button>
-            </div>
-        </div>
-    `;
-    
-    document.body.appendChild(modal);
-    
-    document.getElementById('btn-check-manual').onclick = () => {
-        const answers = document.getElementById('detected-answers').value.toUpperCase();
-        checkAnswers(answers);
+        captureAndProcess();
     };
 }
 
 async function checkAnswers(answers) {
-    // Carrega config
     const config = await loadConfig();
     const correct = (config.correctAnswers || '').toUpperCase();
+    
+    console.log('Gabarito correto:', correct);
+    console.log('Respostas do aluno:', answers);
+    
+    if (!correct || correct.length === 0) {
+        alert('⚠️ Gabarito não configurado! Vá em Config e defina as respostas corretas.');
+        return;
+    }
     
     let correctCount = 0;
     let wrongCount = 0;
     let blankCount = 0;
     
-    for (let i = 0; i < correct.length; i++) {
+    const total = correct.length;
+    
+    for (let i = 0; i < total; i++) {
         const userChar = (answers[i] || '').toUpperCase();
+        const correctChar = correct[i];
         
-        if (!userChar || userChar === '') {
+        if (!userChar || userChar === '' || userChar === ' ') {
             blankCount++;
             wrongCount++;
-        } else if (correct[i] === userChar) {
+        } else if (correctChar === userChar) {
             correctCount++;
         } else {
             wrongCount++;
         }
     }
     
-    const total = correct.length;
     const percentage = total > 0 ? Math.round((correctCount / total) * 100) : 0;
     
-    // Fecha modal anterior
-    const oldModal = document.getElementById('result-modal');
+    // Fecha modal de extração
+    const oldModal = document.getElementById('extraction-modal');
     if (oldModal) oldModal.remove();
     
-    // Mostra resultado final
-    showFinalResult(correctCount, wrongCount, blankCount, total, percentage);
+    showFinalResult(correctCount, wrongCount, blankCount, total, percentage, answers, correct);
 }
 
-function showFinalResult(correct, wrong, blank, total, percentage) {
+function showFinalResult(correct, wrong, blank, total, percentage, userAnswers, correctAnswers) {
     const modal = document.createElement('div');
     modal.className = 'modal-overlay';
     modal.innerHTML = `
@@ -293,13 +310,18 @@ function showFinalResult(correct, wrong, blank, total, percentage) {
                     <span class="score-value">${percentage}%</span>
                 </div>
                 <div id="pass-fail" class="pass-fail ${percentage >= 60 ? 'passed' : 'failed'}">
-                    ${percentage >= 60 ? 'Aprovado!' : 'Reprovado'}
+                    ${percentage >= 60 ? '🎉 Aprovado!' : '❌ Reprovado'}
+                </div>
+                <div style="margin-top:16px;font-size:12px;color:#666">
+                    <div><strong>Correto:</strong> ${correctAnswers}</div>
+                    <div><strong>Sua resposta:</strong> ${userAnswers}</div>
                 </div>
             </div>
         </div>
     `;
     
     document.body.appendChild(modal);
+    isProcessing = false;
 }
 
 async function loadConfig() {
