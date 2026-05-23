@@ -128,13 +128,12 @@ function setupControls() {
     const btnRestart = document.getElementById('btn-restart');
     const btnTest = document.getElementById('btn-test');
     
+    // Botão de captura já visível
     if (btnCapture) {
-        btnCapture.classList.remove('hidden');
         btnCapture.onclick = captureAndProcess;
     }
     
     if (btnStop) {
-        btnStop.classList.remove('hidden');
         btnStop.onclick = stopCamera;
     }
     
