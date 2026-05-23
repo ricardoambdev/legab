@@ -4,27 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LeGab - Gerar Folha de Respostas</title>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:w800&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link rel="stylesheet" href="css/material.css">
     <style>
-        @media print {
-            .no-print { display: none !important; }
-            body { margin: 0; padding: 0; background: white; }
-            .print-container { 
-                display: block !important;
-                margin: 0;
-                padding: 15mm;
-            }
-            header, nav { display: none; }
-        }
-
         .generate-container {
             max-width: 800px;
             margin: 0 auto;
             padding: 16px;
         }
-
+        
         .options-card {
             background: white;
             border-radius: 12px;
@@ -32,22 +21,17 @@
             margin-bottom: 24px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
-
-        .options-card h3 {
-            margin: 0 0 20px 0;
-            color: #333;
+        
+        .actions {
             display: flex;
-            align-items: center;
-            gap: 8px;
+            gap: 12px;
+            margin-top: 16px;
         }
-
-        .form-row {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 16px;
-            margin-bottom: 16px;
+        
+        .actions button {
+            flex: 1;
         }
-
+        
         .print-container {
             display: none;
             background: white;
@@ -57,146 +41,14 @@
             padding: 15mm;
             box-shadow: 0 2px 12px rgba(0,0,0,0.15);
         }
-
-        .sheet-header {
-            background: #FF6D00;
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            color: white;
-            text-align: center;
-        }
-
-        .sheet-header h1 {
-            margin: 0;
-            font-size: 28px;
-            font-weight: 700;
-        }
-
-        .student-info {
-            display: flex;
-            gap: 16px;
-            margin-bottom: 24px;
-        }
-
-        .info-field {
-            flex: 1;
-            border: 2px solid #333;
-            border-radius: 4px;
-            padding: 12px;
-            min-height: 40px;
-        }
-
-        .info-label {
-            font-size: 10px;
-            color: #666;
-            text-transform: uppercase;
-            font-weight: 700;
-            margin-bottom: 4px;
-        }
-
-        .instructions {
-            font-size: 11px;
-            color: #666;
-            margin-bottom: 16px;
-            line-height: 1.5;
-            padding: 12px;
-            background: #f5f5f5;
-            border-radius: 4px;
-        }
-
-        .answers-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 24px;
-        }
-
-        .question-column {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
-
-        .question-row {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .question-number {
-            font-weight: 700;
-            font-size: 14px;
-            min-width: 28px;
-            text-align: right;
-        }
-
-        .alternatives {
-            display: flex;
-            gap: 4px;
-            flex: 1;
-        }
-
-        .alternative {
-            flex: 1;
-            aspect-ratio: 1;
-            border: 2px solid #333;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 12px;
-            font-weight: 700;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .alternative.correct {
-            background: #4CAF50;
-            color: white;
-            border-color: #4CAF50;
-        }
-
-        .alternative.selected {
-            background: #FF6D00;
-            color: white;
-            border-color: #FF6D00;
-        }
-
-        .actions {
-            display: flex;
-            gap: 12px;
-            margin-top: 16px;
-        }
-
-        .actions button {
-            flex: 1;
-        }
-
-        .firebase-status {
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 16px;
-            font-size: 14px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .firebase-status.connected {
-            background: #E8F5E9;
-            color: #2E7D32;
-        }
-
-        .firebase-status.disconnected {
-            background: #FFEBEE;
-            color: #C62828;
-        }
-
-        .status-dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            background: currentColor;
+        
+        @media print {
+            .no-print { display: none !important; }
+            .print-container { 
+                display: block !important;
+                margin: 0;
+                padding: 15mm;
+            }
         }
     </style>
 </head>
@@ -223,264 +75,68 @@
 
     <main class="md-main">
         <div class="generate-container">
-            <div id="firebase-status" class="firebase-status disconnected">
-                <span class="status-dot"></span>
-                <span id="firebase-text">Aguardando Firebase...</span>
-            </div>
-
-            <div class="options-card no-print">
+            <div class="options-card">
                 <h3>
                     <span class="material-icons">settings</span>
-                    Configurações
+                    Gerar Folha de Respostas
                 </h3>
+                
                 <div class="form-row">
                     <div class="md-field">
-                        <label>Título da Prova</label>
-                        <input type="text" id="exam-title" class="md-input" value="Prova 01">
+                        <label>Nome da Prova</label>
+                        <input type="text" id="exam-title" value="Prova 01">
                     </div>
                     <div class="md-field">
                         <label>Número de Questões</label>
-                        <input type="number" id="num-questions" class="md-input" value="60" min="1" max="100">
+                        <input type="number" id="num-questions" value="60" min="1" max="100">
                     </div>
                     <div class="md-field">
                         <label>Alternativas</label>
-                        <select id="num-alternatives" class="md-input">
+                        <select id="num-alternatives">
                             <option value="5">5 (A-E)</option>
                             <option value="4">4 (A-D)</option>
                         </select>
                     </div>
                 </div>
+                
                 <div class="actions">
-                    <button class="md-btn md-btn-primary" onclick="generateSheet()">
-                        <span class="material-icons">refresh</span>
-                        Gerar
+                    <button class="md-btn md-btn-primary" onclick="generateSheet('blank')">
+                        <span class="material-icons">picture_as_pdf</span>
+                        Gerar Folha Vazia
                     </button>
-                    <button class="md-btn md-btn-outline" onclick="clearAnswers()">
-                        <span class="material-icons">clear_all</span>
-                        Limpar
-                    </button>
-                </div>
-            </div>
-
-            <div class="print-container" id="print-container">
-                <div class="sheet-header">
-                    <h1 id="sheet-title">PROVA 01</h1>
-                </div>
-
-                <div class="student-info">
-                    <div class="info-field">
-                        <div class="info-label">Nome do Aluno</div>
-                    </div>
-                    <div class="info-field" style="text-align:center;">
-                        <div class="info-label">Matrícula</div>
-                    </div>
-                </div>
-
-                <div class="instructions">
-                    <strong>Instruções:</strong> Preencha completamente a bolha correspondente à sua resposta. Use caneta preta ou lápis escuro. Não rasurar.
-                </div>
-
-                <div class="answers-grid" id="answers-grid"></div>
-            </div>
-
-            <div class="options-card no-print">
-                <h3>
-                    <span class="material-icons">print</span>
-                    Ações
-                </h3>
-                <div class="actions">
-                    <button class="md-btn md-btn-primary" onclick="printSheet()">
+                    <button class="md-btn md-btn-outline" onclick="generateSheet('filled')">
                         <span class="material-icons">print</span>
-                        Imprimir Folha
+                        Gerar Folha Preenchida
                     </button>
-                    <button class="md-btn md-btn-outline" onclick="saveToFirebase()">
-                        <span class="material-icons">cloud_upload</span>
-                        Salvar no Firebase
+                    <button class="md-btn md-btn-outline" onclick="downloadPDF()">
+                        <span class="material-icons">download</span>
+                        Baixar PDF
                     </button>
                 </div>
             </div>
         </div>
     </main>
 
-    <!-- Firebase -->
-    <script type="module">
-        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-        import { getFirestore, collection, setDoc, doc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
-
-        const firebaseConfig = {
-            apiKey: "AIzaSyBz8gQ6cF6X9vK8YqG3H5jL2mN1oP4qR6s",
-            authDomain: "legab-app.firebaseapp.com",
-            projectId: "legab-app",
-            storageBucket: "legab-app.appspot.com",
-            messagingSenderId: "123456789",
-            appId: "1:123456789:web:abcdef123456"
-        };
-
-        let db = null;
-        let isConnected = false;
-
-        try {
-            const app = initializeApp(firebaseConfig);
-            db = getFirestore(app);
-            isConnected = true;
-            updateFirebaseStatus(true);
-        } catch (error) {
-            console.error('Firebase erro:', error);
-            updateFirebaseStatus(false);
-        }
-
-        function updateFirebaseStatus(connected) {
-            const statusEl = document.getElementById('firebase-status');
-            const textEl = document.getElementById('firebase-text');
-            
-            if (connected) {
-                statusEl.className = 'firebase-status connected';
-                textEl.textContent = 'Firebase conectado';
-            } else {
-                statusEl.className = 'firebase-status disconnected';
-                textEl.textContent = 'Firebase desconectado (armazenamento local)';
-            }
-        }
-
-        window.saveToFirebase = async function() {
-            const config = getCurrentConfig();
-            
-            if (!isConnected) {
-                localStorage.setItem('legab_config', JSON.stringify(config));
-                alert('Firebase indisponível. Salvo localmente!');
-                return;
-            }
-
-            try {
-                await setDoc(doc(db, 'examConfigs', `config_${Date.now()}`), {
-                    ...config,
-                    createdAt: new Date()
-                });
-                localStorage.setItem('legab_config', JSON.stringify(config));
-                alert('✅ Salvo no Firebase!');
-            } catch (error) {
-                alert('Erro: ' + error.message);
-            }
-        };
-
-        window.db = db;
-        window.isConnected = () => isConnected;
-    </script>
-
     <script>
-        let currentConfig = {
-            title: 'Prova 01',
-            numQuestions: 60,
-            numAlternatives: 5,
-            answers: {}
-        };
-
-        const letters = 'ABCDE';
-
-        function init() {
-            const saved = localStorage.getItem('legab_config');
-            if (saved) {
-                try {
-                    currentConfig = { ...currentConfig, ...JSON.parse(saved) };
-                } catch(e) {}
-            }
-
-            document.getElementById('exam-title').value = currentConfig.title;
-            document.getElementById('num-questions').value = currentConfig.numQuestions;
-            document.getElementById('num-alternatives').value = currentConfig.numAlternatives;
-            
-            generateSheet();
-        }
-
-        function getCurrentConfig() {
-            return {
-                title: document.getElementById('exam-title').value,
-                numQuestions: parseInt(document.getElementById('num-questions').value),
-                numAlternatives: parseInt(document.getElementById('num-alternatives').value),
-                answers: currentConfig.answers
-            };
-        }
-
-        function generateSheet() {
-            currentConfig.title = document.getElementById('exam-title').value;
-            currentConfig.numQuestions = parseInt(document.getElementById('num-questions').value);
-            currentConfig.numAlternatives = parseInt(document.getElementById('num-alternatives').value);
-
-            document.getElementById('sheet-title').textContent = currentConfig.title.toUpperCase();
-            document.getElementById('print-container').style.display = 'block';
-
-            const grid = document.getElementById('answers-grid');
-            grid.innerHTML = '';
-
-            const questionsPerColumn = Math.ceil(currentConfig.numQuestions / 2);
-
-            for (let col = 0; col < 2; col++) {
-                const column = document.createElement('div');
-                column.className = 'question-column';
-
-                for (let q = 0; q < questionsPerColumn; q++) {
-                    const questionNum = col * questionsPerColumn + q + 1;
-                    if (questionNum > currentConfig.numQuestions) break;
-
-                    const row = document.createElement('div');
-                    row.className = 'question-row';
-
-                    const numEl = document.createElement('span');
-                    numEl.className = 'question-number';
-                    numEl.textContent = questionNum + '.';
-                    row.appendChild(numEl);
-
-                    const altsContainer = document.createElement('div');
-                    altsContainer.className = 'alternatives';
-
-                    for (let alt = 0; alt < currentConfig.numAlternatives; alt++) {
-                        const altEl = document.createElement('div');
-                        altEl.className = 'alternative';
-                        altEl.textContent = letters[alt];
-                        altEl.dataset.question = questionNum;
-                        altEl.dataset.letter = letters[alt];
-                        
-                        if (currentConfig.answers[questionNum] === letters[alt]) {
-                            altEl.classList.add('correct');
-                        }
-
-                        altEl.onclick = () => toggleAnswer(questionNum, letters[alt]);
-                        altsContainer.appendChild(altEl);
-                    }
-
-                    row.appendChild(altsContainer);
-                    column.appendChild(row);
-                }
-
-                grid.appendChild(column);
-            }
-        }
-
-        function toggleAnswer(questionNum, letter) {
-            if (currentConfig.answers[questionNum] === letter) {
-                delete currentConfig.answers[questionNum];
+        function generateSheet(type) {
+            // Gera a folha de respostas
+            if (type === 'blank') {
+                // Gera folha vazia
+                generateAnswerSheet(false);
             } else {
-                currentConfig.answers[questionNum] = letter;
+                // Gera folha preenchida
+                generateAnswerSheet(true);
             }
-            generateSheet();
         }
-
-        function clearAnswers() {
-            currentConfig.answers = {};
-            generateSheet();
+        
+        function generateAnswerSheet(filled) {
+            // Função para gerar a folha de respostas
+            // Implementação do PDF ou folha aqui
         }
-
-        function printSheet() {
-            generateSheet();
-            setTimeout(() => window.print(), 100);
+        
+        function downloadPDF() {
+            // Função para baixar PDF
         }
-
-        window.saveToFirebase = window.saveToFirebase || (() => {
-            localStorage.setItem('legab_config', JSON.stringify(currentConfig));
-            alert('Salvo!');
-        });
-
-        init();
     </script>
 </body>
 </html>
