@@ -10,16 +10,17 @@
     <style>
         @media print {
             .no-print { display: none !important; }
-            body { margin: 0; padding: 0; }
+            body { margin: 0; padding: 0; background: white; }
             .print-container { 
                 display: block !important;
                 margin: 0;
-                padding: 20mm;
+                padding: 15mm;
             }
+            header, nav { display: none; }
         }
 
         .generate-container {
-            max-width: 900px;
+            max-width: 800px;
             margin: 0 auto;
             padding: 16px;
         }
@@ -57,17 +58,13 @@
             box-shadow: 0 2px 12px rgba(0,0,0,0.15);
         }
 
-        .answer-sheet {
-            width: 100%;
-            height: 100%;
-        }
-
         .sheet-header {
             background: #FF6D00;
             padding: 20px;
             border-radius: 8px;
             margin-bottom: 20px;
             color: white;
+            text-align: center;
         }
 
         .sheet-header h1 {
@@ -76,20 +73,14 @@
             font-weight: 700;
         }
 
-        .sheet-header p {
-            margin: 8px 0 0 0;
-            opacity: 0.95;
-            font-size: 14px;
-        }
-
         .student-info {
-            display: grid;
-            grid-template-columns: 1fr 200px;
+            display: flex;
             gap: 16px;
             margin-bottom: 24px;
         }
 
         .info-field {
+            flex: 1;
             border: 2px solid #333;
             border-radius: 4px;
             padding: 12px;
@@ -104,61 +95,44 @@
             margin-bottom: 4px;
         }
 
-        .info-value {
-            font-size: 16px;
-            font-weight: 500;
-        }
-
-        .qr-section {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border: 2px solid #333;
-            border-radius: 4px;
-            padding: 8px;
-        }
-
-        .qr-placeholder {
-            width: 80px;
-            height: 80px;
+        .instructions {
+            font-size: 11px;
+            color: #666;
+            margin-bottom: 16px;
+            line-height: 1.5;
+            padding: 12px;
             background: #f5f5f5;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 10px;
-            color: #999;
-            text-align: center;
+            border-radius: 4px;
         }
 
-        .answers-area {
+        .answers-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
-            gap: 20px;
+            gap: 24px;
         }
 
         .question-column {
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 6px;
         }
 
         .question-row {
             display: flex;
             align-items: center;
             gap: 8px;
-            padding: 4px 0;
         }
 
         .question-number {
             font-weight: 700;
             font-size: 14px;
-            min-width: 24px;
+            min-width: 28px;
             text-align: right;
         }
 
         .alternatives {
             display: flex;
-            gap: 6px;
+            gap: 4px;
             flex: 1;
         }
 
@@ -174,7 +148,6 @@
             font-weight: 700;
             cursor: pointer;
             transition: all 0.2s;
-            position: relative;
         }
 
         .alternative.correct {
@@ -189,62 +162,24 @@
             border-color: #FF6D00;
         }
 
-        .alternative.correct::after {
-            content: '✓';
-            position: absolute;
-            font-size: 16px;
-        }
-
-        .alternative.selected::after {
-            content: '✓';
-            position: absolute;
-            font-size: 16px;
-        }
-
         .actions {
             display: flex;
             gap: 12px;
-            flex-wrap: wrap;
             margin-top: 16px;
         }
 
         .actions button {
             flex: 1;
-            min-width: 150px;
-        }
-
-        .instructions {
-            background: #E3F2FD;
-            padding: 16px;
-            border-radius: 8px;
-            margin-bottom: 16px;
-            color: #1565C0;
-        }
-
-        .instructions h4 {
-            margin: 0 0 8px 0;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .instructions ul {
-            margin: 8px 0 0 0;
-            padding-left: 20px;
-        }
-
-        .instructions li {
-            margin: 4px 0;
         }
 
         .firebase-status {
-            display: flex;
-            align-items: center;
-            gap: 8px;
             padding: 12px;
             border-radius: 8px;
             margin-bottom: 16px;
             font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
         .firebase-status.connected {
@@ -288,20 +223,6 @@
 
     <main class="md-main">
         <div class="generate-container">
-            <div class="instructions no-print">
-                <h4>
-                    <span class="material-icons">info</span>
-                    Como usar
-                </h4>
-                <ul>
-                    <li>Configure o número de questões e alternativas</li>
-                    <li>Preencha o gabarito oficial clicando nas alternativas</li>
-                    <li>Salve no Firebase para sincronização</li>
-                    <li>Imprima a folha de respostas</li>
-                    <li>Use o scanner para corrigir</li>
-                </ul>
-            </div>
-
             <div id="firebase-status" class="firebase-status disconnected">
                 <span class="status-dot"></span>
                 <span id="firebase-text">Aguardando Firebase...</span>
@@ -315,7 +236,7 @@
                 <div class="form-row">
                     <div class="md-field">
                         <label>Título da Prova</label>
-                        <input type="text" id="exam-title" class="md-input" value="Prova 01" placeholder="Ex: Prova Bimestral">
+                        <input type="text" id="exam-title" class="md-input" value="Prova 01">
                     </div>
                     <div class="md-field">
                         <label>Número de Questões</label>
@@ -326,53 +247,40 @@
                         <select id="num-alternatives" class="md-input">
                             <option value="5">5 (A-E)</option>
                             <option value="4">4 (A-D)</option>
-                            <option value="3">3 (A-C)</option>
                         </select>
                     </div>
                 </div>
                 <div class="actions">
                     <button class="md-btn md-btn-primary" onclick="generateSheet()">
                         <span class="material-icons">refresh</span>
-                        Gerar Folha
+                        Gerar
                     </button>
                     <button class="md-btn md-btn-outline" onclick="clearAnswers()">
                         <span class="material-icons">clear_all</span>
-                        Limpar Gabarito
+                        Limpar
                     </button>
                 </div>
             </div>
 
             <div class="print-container" id="print-container">
-                <div class="answer-sheet">
-                    <div class="sheet-header">
-                        <h1 id="sheet-title">PROVA 01</h1>
-                        <p>Folha de Respostas - LeGab</p>
-                    </div>
+                <div class="sheet-header">
+                    <h1 id="sheet-title">PROVA 01</h1>
+                </div>
 
-                    <div class="student-info">
-                        <div>
-                            <div class="info-label">Nome do Aluno</div>
-                            <div class="info-value" style="border-bottom: 2px solid #333; min-height: 30px;"></div>
-                        </div>
-                        <div class="qr-section">
-                            <div class="qr-placeholder" id="qr-code">
-                                QR Code aqui
-                            </div>
-                        </div>
+                <div class="student-info">
+                    <div class="info-field">
+                        <div class="info-label">Nome do Aluno</div>
                     </div>
-
-                    <div class="info-label" style="margin-bottom: 8px;">Instruções</div>
-                    <div style="font-size: 11px; color: #666; margin-bottom: 16px; line-height: 1.4;">
-                        • Preencha completamente a bolha correspondente à sua resposta<br>
-                        • Use caneta preta ou lápis escuro<br>
-                        • Não rasurar ou fazer marcas fora das bolhas<br>
-                        • Cada questão possui apenas uma alternativa correta
-                    </div>
-
-                    <div class="answers-area" id="answers-area">
-                        <!-- Gerado via JavaScript -->
+                    <div class="info-field" style="text-align:center;">
+                        <div class="info-label">Matrícula</div>
                     </div>
                 </div>
+
+                <div class="instructions">
+                    <strong>Instruções:</strong> Preencha completamente a bolha correspondente à sua resposta. Use caneta preta ou lápis escuro. Não rasurar.
+                </div>
+
+                <div class="answers-grid" id="answers-grid"></div>
             </div>
 
             <div class="options-card no-print">
@@ -389,10 +297,6 @@
                         <span class="material-icons">cloud_upload</span>
                         Salvar no Firebase
                     </button>
-                    <button class="md-btn md-btn-outline" onclick="loadFromFirebase()">
-                        <span class="material-icons">cloud_download</span>
-                        Carregar do Firebase
-                    </button>
                 </div>
             </div>
         </div>
@@ -401,7 +305,7 @@
     <!-- Firebase -->
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-        import { getFirestore, collection, addDoc, getDocs, doc, setDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+        import { getFirestore, collection, setDoc, doc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
         const firebaseConfig = {
             apiKey: "AIzaSyBz8gQ6cF6X9vK8YqG3H5jL2mN1oP4qR6s",
@@ -420,9 +324,8 @@
             db = getFirestore(app);
             isConnected = true;
             updateFirebaseStatus(true);
-            console.log('✅ Firebase conectado');
         } catch (error) {
-            console.error('❌ Erro Firebase:', error);
+            console.error('Firebase erro:', error);
             updateFirebaseStatus(false);
         }
 
@@ -435,57 +338,28 @@
                 textEl.textContent = 'Firebase conectado';
             } else {
                 statusEl.className = 'firebase-status disconnected';
-                textEl.textContent = 'Firebase desconectado (usando armazenamento local)';
+                textEl.textContent = 'Firebase desconectado (armazenamento local)';
             }
         }
 
         window.saveToFirebase = async function() {
+            const config = getCurrentConfig();
+            
             if (!isConnected) {
-                alert('Firebase não configurado. Salvando localmente...');
-                saveConfig();
-                return;
-            }
-
-            try {
-                const config = getCurrentConfig();
-                await setDoc(doc(collection(db, 'examConfigs'), `config_${Date.now()}`), {
-                    ...config,
-                    createdAt: new Date(),
-                    version: '1.0'
-                });
-
                 localStorage.setItem('legab_config', JSON.stringify(config));
-                alert('✅ Configurada salva no Firebase!');
-            } catch (error) {
-                console.error('Erro:', error);
-                alert('Erro ao salvar: ' + error.message);
-            }
-        };
-
-        window.loadFromFirebase = async function() {
-            if (!isConnected) {
-                alert('Firebase não disponível');
+                alert('Firebase indisponível. Salvo localmente!');
                 return;
             }
 
             try {
-                const querySnapshot = await getDocs(collection(db, 'examConfigs'));
-                const configs = [];
-                
-                querySnapshot.forEach((doc) => {
-                    configs.push({ id: doc.id, ...doc.data() });
+                await setDoc(doc(db, 'examConfigs', `config_${Date.now()}`), {
+                    ...config,
+                    createdAt: new Date()
                 });
-
-                if (configs.length === 0) {
-                    alert('Nenhuma configuração encontrada');
-                    return;
-                }
-
-                const latest = configs.sort((a, b) => b.createdAt - a.createdAt)[0];
-                applyConfig(latest);
-                alert(`✅ Configuração "${latest.title}" carregada!`);
+                localStorage.setItem('legab_config', JSON.stringify(config));
+                alert('✅ Salvo no Firebase!');
             } catch (error) {
-                alert('Erro ao carregar: ' + error.message);
+                alert('Erro: ' + error.message);
             }
         };
 
@@ -507,8 +381,7 @@
             const saved = localStorage.getItem('legab_config');
             if (saved) {
                 try {
-                    const config = JSON.parse(saved);
-                    currentConfig = { ...currentConfig, ...config };
+                    currentConfig = { ...currentConfig, ...JSON.parse(saved) };
                 } catch(e) {}
             }
 
@@ -534,9 +407,10 @@
             currentConfig.numAlternatives = parseInt(document.getElementById('num-alternatives').value);
 
             document.getElementById('sheet-title').textContent = currentConfig.title.toUpperCase();
+            document.getElementById('print-container').style.display = 'block';
 
-            const answersArea = document.getElementById('answers-area');
-            answersArea.innerHTML = '';
+            const grid = document.getElementById('answers-grid');
+            grid.innerHTML = '';
 
             const questionsPerColumn = Math.ceil(currentConfig.numQuestions / 2);
 
@@ -570,7 +444,7 @@
                             altEl.classList.add('correct');
                         }
 
-                        altEl.onclick = () => toggleAnswer(questionNum, letters[alt], altEl);
+                        altEl.onclick = () => toggleAnswer(questionNum, letters[alt]);
                         altsContainer.appendChild(altEl);
                     }
 
@@ -578,24 +452,17 @@
                     column.appendChild(row);
                 }
 
-                answersArea.appendChild(column);
+                grid.appendChild(column);
             }
         }
 
-        function toggleAnswer(questionNum, letter, element) {
+        function toggleAnswer(questionNum, letter) {
             if (currentConfig.answers[questionNum] === letter) {
                 delete currentConfig.answers[questionNum];
-                element.classList.remove('correct');
             } else {
-                // Remove previous
-                const prev = currentConfig.answers[questionNum];
-                if (prev) {
-                    const prevEl = element.parentElement.parentElement.querySelector(`[data-question="${questionNum}"][data-letter="${prev}"]`);
-                    if (prevEl) prevEl.classList.remove('correct');
-                }
                 currentConfig.answers[questionNum] = letter;
-                element.classList.add('correct');
             }
+            generateSheet();
         }
 
         function clearAnswers() {
@@ -604,19 +471,14 @@
         }
 
         function printSheet() {
-            saveConfig();
-            setTimeout(() => {
-                window.print();
-            }, 500);
+            generateSheet();
+            setTimeout(() => window.print(), 100);
         }
 
-        function saveConfig() {
+        window.saveToFirebase = window.saveToFirebase || (() => {
             localStorage.setItem('legab_config', JSON.stringify(currentConfig));
-            console.log('Config salva locally');
-        }
-
-        window.saveConfig = saveConfig;
-        window.getCurrentConfig = getCurrentConfig;
+            alert('Salvo!');
+        });
 
         init();
     </script>
