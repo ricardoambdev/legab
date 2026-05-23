@@ -17,38 +17,43 @@ class OMRModule {
         this.bubbleGrid = null;
         this.debug = config.debug || false;
         this.alternativeLetters = 'ABCDE';
+        console.log('OMR Config:', this.config);
     }
 
     /**
      * Gera grid de bolhas baseado nas dimensões do gabarito
      */
     generateBubbleGrid(width, height) {
-        const { numQuestions, alternativesPerQuestion, columns, bubbleRows } = this.config;
+        const { numQuestions, alternativesPerQuestion, columns } = this.config;
+        
+        console.log(`Gerando grid: ${width}x${height}, ${numQuestions} questoes, ${columns} colunas`);
         
         const questionsPerColumn = Math.ceil(numQuestions / columns);
         const columnWidth = width / columns;
-        const totalRows = questionsPerColumn * alternativesPerQuestion;
-        const bubbleHeight = height / (totalRows / columns * 2);
-        const bubbleWidth = columnWidth / alternativesPerQuestion;
+        const totalRows = questionsPerColumn;
+        
+        // Calcula tamanho das bolhas
+        const bubbleWidth = columnWidth / alternativesPerQuestion / 2; // Metade do espaço
+        const bubbleHeight = height / (totalRows * alternativesPerQuestion * 2); // Espaço vertical
         
         const grid = [];
         
         for (let col = 0; col < columns; col++) {
-            const startX = (col * columnWidth) + (columnWidth * 0.15);
-            const colWidth = columnWidth * 0.7;
+            const colStartX = (col * columnWidth) + (columnWidth * 0.2); // 20% margem esquerda
+            const colWidth2 = columnWidth * 0.6; // 60% da largura da coluna
             
             for (let q = 0; q < questionsPerColumn; q++) {
                 const questionNum = col * questionsPerColumn + q + 1;
                 if (questionNum > numQuestions) break;
                 
                 const questionBubbles = [];
-                const startY = (q * alternativesPerQuestion * bubbleHeight) + (bubbleHeight * 0.3);
+                const questionStartY = (q * alternativesPerQuestion * bubbleHeight * 2) + (height * 0.05);
                 
                 for (let alt = 0; alt < alternativesPerQuestion; alt++) {
-                    const x = startX + (alt * (colWidth / alternativesPerQuestion));
-                    const y = startY + (alt * bubbleHeight * 0.1);
-                    const w = bubbleWidth * 0.6;
-                    const h = bubbleHeight * 0.5;
+                    const x = colStartX + (alt * (colWidth2 / alternativesPerQuestion));
+                    const y = questionStartY + (alt * bubbleHeight * 0.3);
+                    const w = bubbleWidth * 0.8;
+                    const h = bubbleHeight * 0.6;
                     
                     questionBubbles.push({
                         question: questionNum,
@@ -62,11 +67,14 @@ class OMRModule {
                     });
                 }
                 
-                grid.push(questionBubbles);
+                if (questionBubbles.length > 0) {
+                    grid.push(questionBubbles);
+                }
             }
         }
         
         this.bubbleGrid = grid;
+        console.log('Grid gerado:', grid.length, 'questões');
         return grid;
     }
 
@@ -75,19 +83,26 @@ class OMRModule {
      */
     detectBubbleMark(src, bubble) {
         try {
+            if (!bubble || !src) {
+                return { filled: false, confidence: 0, fillPercentage: 0 };
+            }
+            
             const { x, y, w, h } = bubble;
             
-            if (x < 0 || y < 0 || x + w > src.cols || y + h > src.rows) {
+            // Verifica limites
+            if (x < 0 || y < 0 || w <= 0 || h <= 0) {
+                return { filled: false, confidence: 0, fillPercentage: 0 };
+            }
+            
+            const rectWidth = Math.min(Math.floor(w), src.cols - Math.floor(x));
+            const rectHeight = Math.min(Math.floor(h), src.rows - Math.floor(y));
+            
+            if (rectWidth <= 0 || rectHeight <= 0) {
                 return { filled: false, confidence: 0, fillPercentage: 0 };
             }
             
             const roi = src.roi(
-                new cv.Rect(
-                    Math.floor(x), 
-                    Math.floor(y), 
-                    Math.floor(w), 
-                    Math.floor(h)
-                )
+                new cv.Rect(Math.floor(x), Math.floor(y), rectWidth, rectHeight)
             );
             
             if (roi.empty()) {
@@ -115,16 +130,21 @@ class OMRModule {
      * Processa todas as bolhas e retorna respostas
      */
     processImage(src) {
+        console.log('Processando imagem:', src.cols, 'x', src.rows);
+        
         if (src.empty()) {
-            console.error('Imagem vazia no processImage');
+            console.error('Imagem vazia!');
             return [];
         }
 
         const results = [];
         
-        if (!this.bubbleGrid) {
+        // Gera grid baseado no tamanho da imagem
+        if (!this.bubbleGrid || this.bubbleGrid.length === 0) {
             this.generateBubbleGrid(src.cols, src.rows);
         }
+        
+        console.log('Processando', this.bubbleGrid.length, 'questões');
         
         for (let i = 0; i < this.bubbleGrid.length; i++) {
             const questionBubbles = this.bubbleGrid[i];
@@ -160,6 +180,7 @@ class OMRModule {
             results.push(questionResults);
         }
         
+        console.log('Processamento concluído:', results.length, 'questões');
         return results;
     }
 
@@ -203,7 +224,7 @@ class OMRModule {
             
             const detail = {
                 question: userAnswer.question,
-                userAnswer: userAnswer.answer || '',
+                userAnswer: (userAnswer.answer || '').toUpperCase(),
                 correctAnswer: correct,
                 isCorrect: (userAnswer.answer || '').toUpperCase() === correct,
                 confidence: userAnswer.confidence
@@ -227,30 +248,6 @@ class OMRModule {
             Math.round((results.correct / results.total) * 100) : 0;
         
         return results;
-    }
-
-    /**
-     * Desenha grid de bolhas na imagem (debug)
-     */
-    drawGrid(src, color = [0, 255, 0]) {
-        const dst = src.clone();
-        
-        if (!this.bubbleGrid) {
-            this.generateBubbleGrid(src.cols, src.rows);
-        }
-        
-        for (const questionBubbles of this.bubbleGrid) {
-            for (const bubble of questionBubbles) {
-                const point = new cv.Point(
-                    Math.floor(bubble.x + bubble.w / 2),
-                    Math.floor(bubble.y + bubble.h / 2)
-                );
-                const radius = Math.floor(Math.max(bubble.w, bubble.h) / 2);
-                cv.circle(dst, point, radius, color, 1);
-            }
-        }
-        
-        return dst;
     }
 
     /**
