@@ -93,12 +93,7 @@ body {
 }
 
 .md-nav a::after {
-    content: attr(data-tooltip);
-    position: absolute;
-    bottom: -25px;
-    font-size: 10px;
-    opacity: 0;
-    transition: opacity 0.3s;
+    display: none;
 }
 
 .md-nav a:hover {
@@ -532,6 +527,156 @@ body {
     vertical-align: middle;
     font-size: 18px;
     color: var(--primary);
+}
+
+/* Logo Preview */
+.logo-preview {
+    margin-top: 12px;
+    padding: 12px;
+    background: #f5f5f5;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.logo-preview img {
+    max-height: 80px;
+    max-width: 200px;
+}
+
+.logo-preview.hidden {
+    display: none;
+}
+
+/* Answer Builder */
+.answer-builder {
+    background: var(--primary-light);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.answer-header {
+    display: flex;
+    background: var(--primary);
+    color: white;
+    font-weight: 500;
+    font-size: 0.85rem;
+}
+
+.answer-num {
+    width: 50px;
+    padding: 8px;
+    text-align: center;
+}
+
+.answer-alts {
+    display: flex;
+    flex: 1;
+}
+
+.answer-alt-label {
+    flex: 1;
+    text-align: center;
+    padding: 8px 4px;
+    font-weight: 500;
+}
+
+.answer-rows {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.answer-row {
+    display: flex;
+    border-bottom: 1px solid var(--divider);
+}
+
+.answer-row:last-child {
+    border-bottom: none;
+}
+
+.answer-row-num {
+    width: 50px;
+    padding: 8px;
+    text-align: center;
+    font-weight: 500;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.answer-row-alts {
+    display: flex;
+    flex: 1;
+    background: #fff;
+}
+
+.answer-btn {
+    flex: 1;
+    padding: 10px 4px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    transition: all 0.15s;
+    border-right: 1px solid var(--divider);
+}
+
+.answer-btn:last-child {
+    border-right: none;
+}
+
+.answer-btn.selected {
+    background: var(--primary);
+    color: white;
+}
+
+.answer-btn:hover:not(.selected) {
+    background: rgba(255,109,0,0.1);
+}
+
+/* Gabarito Preview */
+.gabarito-preview {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.gabarito-input {
+    flex: 1;
+    font-family: 'Roboto Mono', monospace;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    background: var(--primary-light);
+}
+
+.md-counter {
+    font-size: 0.85rem;
+    font-weight: 500;
+    padding: 8px 12px;
+    border-radius: 16px;
+    background: var(--divider);
+    color: var(--text-secondary);
+    min-width: 60px;
+    text-align: center;
+}
+
+.md-counter.success {
+    background: #E8F5E9;
+    color: var(--success);
+}
+
+.md-counter.error {
+    background: #FFEBEE;
+    color: var(--error);
+}
+
+.md-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
 }
 
 /* Toast */

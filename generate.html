@@ -4,42 +4,54 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LeGab - Gerar Gabarito</title>
-    <link rel="stylesheet" href="css/material.css">
+    <link rel="manifest" href="manifest.json">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="css/material.css">
+    <link rel="stylesheet" href="css/gabarito.css">
 </head>
 <body>
-    <div class="app-container">
-        <header class="md-header">
-            <h1>LeGab</h1>
-            <nav class="md-nav">
-                <a href="index.html">Scanner</a>
-                <a href="generate.html" class="active">Gerar</a>
-                <a href="config.html">Config</a>
-            </nav>
-        </header>
-
-        <main class="md-main">
-            <div class="md-card">
-                <h2>Simulado Trimestral</h2>
-                <p class="md-hint">Escolha o tipo de gabarito</p>
-
-                <div class="generate-options">
-                    <button id="btn-blank" class="generate-btn">
-                        <span class="material-icons">description</span>
-                        <strong>Em Branco</strong>
-                        <small>Para aluno preencher</small>
-                    </button>
-                    <button id="btn-key" class="generate-btn">
-                        <span class="material-icons">check_circle</span>
-                        <strong>Com Respostas</strong>
-                        <small>Para correção</small>
-                    </button>
-                </div>
+    <header class="md-header">
+        <div class="header-content">
+            <div class="logo">
+                <span class="material-icons">qr_code_scanner</span>
+                <h1>LeGab</h1>
             </div>
-        </main>
-    </div>
+            <nav class="md-nav">
+                <a href="index.html" data-tooltip="Scanner">
+                    <span class="material-icons">qr_code_scanner</span>
+                </a>
+                <a href="generate.html" class="active" data-tooltip="Gerar">
+                    <span class="material-icons">add_box</span>
+                </a>
+                <a href="config.html" data-tooltip="Config">
+                    <span class="material-icons">settings</span>
+                </a>
+            </nav>
+        </div>
+    </header>
 
-    <div id="toast" class="toast"></div>
+    <main class="md-main">
+        <div class="md-card">
+            <h2>Simulado Trimestral</h2>
+            <p class="md-hint">Escolha o tipo de gabarito</p>
+
+            <div class="generate-options">
+                <button id="btn-blank" class="generate-btn">
+                    <span class="material-icons">description</span>
+                    <strong>Em Branco</strong>
+                    <small>Para aluno preencher</small>
+                </button>
+                <button id="btn-key" class="generate-btn">
+                    <span class="material-icons">check_circle</span>
+                    <strong>Com Respostas</strong>
+                    <small>Para correção</small>
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <div id="toast" class="md-toast"></div>
 
     <script>
         let config = null;
@@ -65,7 +77,7 @@
 
                 const w = window.open('', '_blank');
                 const answers = showAnswers ? config.correctAnswers : '';
-                const numQ = config.numQuestions || 6;
+                const numQ = config.numQuestions || 60;
                 const numA = config.numAlternatives || 5;
                 const left = config.leftColumn || Math.ceil(numQ / 2);
                 const right = config.rightColumn || Math.floor(numQ / 2);
@@ -74,7 +86,6 @@
                 const opts = 'ABCDE'.substring(0, numA);
                 const titleText = showAnswers ? 'Simulado Trimestral' : school;
 
-                // Data atual formatada
                 const today = new Date();
                 const day = String(today.getDate()).padStart(2, '0');
                 const month = String(today.getMonth() + 1).padStart(2, '0');
@@ -200,8 +211,8 @@
             function showToast(msg, isError) {
                 const t = document.getElementById('toast');
                 t.textContent = msg;
-                t.className = `toast show ${isError ? 'error' : 'success'}`;
-                setTimeout(()=>t.classList.remove('show'), 3000);
+                t.className = `md-toast show ${isError ? 'error' : 'success'}`;
+                setTimeout(() => t.classList.remove('show'), 3000);
             }
         });
     </script>
