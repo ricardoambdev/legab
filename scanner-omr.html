@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LeGab - Scanner OMR</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="css/material.css">
+    <style>
+        .scanner-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        #video {
+            width: 100%;
+            border-radius: 12px;
+            background: #000;
+        }
+
+        #overlay-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            border-radius: 12px;
+        }
+
+        .scan-frame {
+            position: absolute;
+            top: 20%;
+            left: 10%;
+            width: 80%;
+            height: 60%;
+            border: 2px solid rgba(255, 109, 0, 0.8);
+            border-radius: 8px;
+            pointer-events: none;
+        }
+
+        .scan-frame::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            border: 2px solid transparent;
+            border-top-color: #FF6D00;
+            border-bottom-color: #FF6D00;
+            border-radius: 8px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .scan-line {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: #FF6D00;
+            box-shadow: 0 0 10px #FF6D00;
+        }
+
+        .scan-line.scanning {
+            animation: scanMove 2s linear infinite;
+        }
+
+        @keyframes scanMove {
+            0% { top: 0%; }
+            100% { top: 100%; }
+        }
+
+        .controls {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            padding: 0 20px;
+        }
+
+        .control-btn {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: #FF6D00;
+            border: none;
+            color: white;
+            font-size: 28px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(255, 109, 0, 0.4);
+            transition: transform 0.2s;
+        }
+
+        .control-btn:active {
+            transform: scale(0.95);
+        }
+
+        .control-btn.hidden {
+            display: none;
+        }
+
+        .status-bar {
+            background: white;
+            padding: 16px;
+            border-radius: 12px;
+            margin: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .status-text {
+            font-size: 16px;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .log-text {
+            font-size: 12px;
+            color: #666;
+            margin-top: 8px;
+            font-family: monospace;
+        }
+
+        .result-summary {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat {
+            text-align: center;
+            padding: 16px;
+            border-radius: 8px;
+            background: #f5f5f5;
+        }
+
+        .stat.correct { background: #e8f5e9; }
+        .stat.wrong { background: #ffebee; }
+        .stat.blank { background: #fff3e0; }
+        .stat.percentage { background: #e3f2fd; }
+
+        .stat-value {
+            display: block;
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .stat-label {
+            display: block;
+            font-size: 12px;
+            color: #666;
+        }
+
+        .result-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 16px 0;
+        }
+
+        .result-table th,
+        .result-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        .result-table th {
+            background: #f5f5f5;
+            font-weight: 500;
+        }
+
+        .result-table tr.correct { background: #e8f5e9; }
+        .result-table tr.wrong { background: #ffebee; }
+        .result-table tr.blank { background: #fff3e0; }
+
+        .result-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        .result-actions button {
+            flex: 1;
+        }
+
+        /* Debug mode */
+        .debug-canvas {
+            display: none;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+        }
+
+        .debug-mode .debug-canvas {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <header class="md-header">
+        <div class="header-content">
+            <div class="logo">
+                <span class="material-icons">qr_code_scanner</span>
+                <h1>LeGab OMR</h1>
+            </div>
+            <nav class="md-nav">
+                <a href="scanner-omr.html" class="active">
+                    <span class="material-icons">qr_code_scanner</span>
+                </a>
+                <a href="generate.html">
+                    <span class="material-icons">add_box</span>
+                </a>
+                <a href="config.html">
+                    <span class="material-icons">settings</span>
+                </a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="md-main">
+        <div class="scanner-container">
+            <video id="video" autoplay playsinline muted></video>
+            <canvas id="overlay-canvas"></canvas>
+            <div class="scan-frame">
+                <div class="scan-line"></div>
+            </div>
+            
+            <div class="controls">
+                <button id="btn-capture" class="control-btn">
+                    <span class="material-icons">photo_camera</span>
+                </button>
+                <button id="btn-stop" class="control-btn hidden">
+                    <span class="material-icons">stop</span>
+                </button>
+                <button id="btn-restart" class="control-btn hidden">
+                    <span class="material-icons">refresh</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="status-bar">
+            <div class="status-text" id="status">Aguardando...</div>
+            <div class="log-text" id="log"></div>
+        </div>
+
+        <div id="debug-container"></div>
+    </main>
+
+    <!-- OpenCV.js -->
+    <script async src="https://docs.opencv.org/4.8.0/opencv.js" onload="onOpenCVReady()"></script>
+    
+    <!-- Módulos OMR -->
+    <script src="js/omr/config.js"></script>
+    <script src="js/omr/camera.js"></script>
+    <script src="js/omr/preprocessing.js"></script>
+    <script src="js/omr/perspective.js"></script>
+    <script src="js/omr/omr.js"></script>
+    <script src="js/omr/ui.js"></script>
+    
+    <!-- App principal -->
+    <script src="js/app.js"></script>
+</body>
+</html>
