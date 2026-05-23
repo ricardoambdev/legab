@@ -4,17 +4,139 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LeGab - Gerar Gabarito</title>
-    <link rel="manifest" href="manifest.json">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link rel="stylesheet" href="css/material.css">
-    <link rel="stylesheet" href="css/gabarito.css">
+    <style>
+        .generate-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 16px;
+        }
+
+        .options-card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .options-card h3 {
+            margin: 0 0 20px 0;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .preview-container {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .preview-container h3 {
+            margin: 0 0 16px 0;
+            color: #333;
+        }
+
+        #preview-canvas {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            max-width: 100%;
+            height: auto;
+        }
+
+        .actions {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .actions button {
+            flex: 1;
+            min-width: 150px;
+        }
+
+        .answer-key-preview {
+            margin-top: 16px;
+            padding: 16px;
+            background: #f5f5f5;
+            border-radius: 8px;
+        }
+
+        .answer-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .answer-cell {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: white;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 14px;
+        }
+
+        .answer-cell.selected {
+            background: #FF6D00;
+            color: white;
+            border-color: #FF6D00;
+        }
+
+        .answer-cell:hover {
+            border-color: #FF6D00;
+        }
+
+        .instructions {
+            background: #E3F2FD;
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            color: #1565C0;
+        }
+
+        .instructions h4 {
+            margin: 0 0 8px 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .instructions ul {
+            margin: 8px 0 0 0;
+            padding-left: 20px;
+        }
+
+        .instructions li {
+            margin: 4px 0;
+        }
+    </style>
 </head>
 <body>
     <header class="md-header">
         <div class="header-content">
             <div class="logo">
-                <span class="material-icons">qr_code_scanner</span>
+                <span class="material-icons">add_box</span>
                 <h1>LeGab</h1>
             </div>
             <nav class="md-nav">
@@ -32,189 +154,250 @@
     </header>
 
     <main class="md-main">
-        <div class="md-card">
-            <h2>Simulado Trimestral</h2>
-            <p class="md-hint">Escolha o tipo de gabarito</p>
+        <div class="generate-container">
+            <div class="instructions">
+                <h4>
+                    <span class="material-icons">info</span>
+                    Como usar
+                </h4>
+                <ul>
+                    <li>Configure o número de questões e alternativas</li>
+                    <li>Selecione as respostas do gabarito oficial</li>
+                    <li>Imprima para usar com o scanner OMR</li>
+                    <li>O layout é compatível com o sistema de leitura</li>
+                </ul>
+            </div>
 
-            <div class="generate-options">
-                <button id="btn-blank" class="generate-btn">
-                    <span class="material-icons">description</span>
-                    <strong>Em Branco</strong>
-                    <small>Para aluno preencher</small>
+            <div class="options-card">
+                <h3>
+                    <span class="material-icons">settings</span>
+                    Configurações
+                </h3>
+                <div class="form-row">
+                    <div class="md-field">
+                        <label>Número de Questões</label>
+                        <input type="number" id="num-questions" class="md-input" value="60" min="1" max="100">
+                    </div>
+                    <div class="md-field">
+                        <label>Alternativas por Questão</label>
+                        <select id="num-alternatives" class="md-input">
+                            <option value="5">5 (A-E)</option>
+                            <option value="4">4 (A-D)</option>
+                            <option value="3">3 (A-C)</option>
+                        </select>
+                    </div>
+                    <div class="md-field">
+                        <label>Colunas</label>
+                        <select id="num-columns" class="md-input">
+                            <option value="2">2 Colunas</option>
+                            <option value="1">1 Coluna</option>
+                            <option value="3">3 Colunas</option>
+                        </select>
+                    </div>
+                </div>
+                <button class="md-btn md-btn-primary" onclick="generatePreview()">
+                    <span class="material-icons">refresh</span>
+                    Gerar Visualização
                 </button>
-                <button id="btn-key" class="generate-btn">
-                    <span class="material-icons">check_circle</span>
-                    <strong>Com Respostas</strong>
-                    <small>Para correção</small>
-                </button>
+            </div>
+
+            <div class="preview-container">
+                <h3>
+                    <span class="material-icons">visibility</span>
+                    Visualização
+                </h3>
+                <canvas id="preview-canvas"></canvas>
+                
+                <div class="answer-key-preview">
+                    <h4>Gabarito Oficial (clique para editar)</h4>
+                    <p style="color: #666; font-size: 14px;">Selecione a alternativa correta para cada questão:</p>
+                    <div id="answer-grid" class="answer-grid"></div>
+                </div>
+            </div>
+
+            <div class="options-card">
+                <h3>
+                    <span class="material-icons">print</span>
+                    Impressão
+                </h3>
+                <div class="actions">
+                    <button class="md-btn md-btn-primary" onclick="printSheet()">
+                        <span class="material-icons">print</span>
+                        Imprimir Folha
+                    </button>
+                    <button class="md-btn md-btn-outline" onclick="downloadPDF()">
+                        <span class="material-icons">download</span>
+                        Baixar PDF
+                    </button>
+                    <button class="md-btn md-btn-outline" onclick="saveConfig()">
+                        <span class="material-icons">save</span>
+                        Salvar Config
+                    </button>
+                </div>
             </div>
         </div>
     </main>
 
-    <div id="toast" class="md-toast"></div>
-
     <script>
-        let config = null;
+        let currentConfig = {
+            numQuestions: 60,
+            numAlternatives: 5,
+            columns: 2,
+            answers: {}
+        };
 
-        document.addEventListener('DOMContentLoaded', () => {
-            try {
-                const stored = localStorage.getItem('legab_config');
-                if (stored) config = JSON.parse(stored);
-            } catch(e) {}
+        function init() {
+            document.getElementById('num-questions').value = currentConfig.numQuestions;
+            document.getElementById('num-alternatives').value = currentConfig.numAlternatives;
+            document.getElementById('num-columns').value = currentConfig.columns;
+            
+            generatePreview();
+        }
 
-            document.getElementById('btn-blank').onclick = () => generate(false);
-            document.getElementById('btn-key').onclick = () => generate(true);
-
-            function generate(showAnswers) {
-                if (!config) {
-                    showToast('Configure em Config primeiro!', true);
-                    return;
-                }
-                if (showAnswers && !config.correctAnswers) {
-                    showToast('Crie gabarito em Config!', true);
-                    return;
-                }
-
-                const w = window.open('', '_blank');
-                const answers = showAnswers ? config.correctAnswers : '';
-                const numQ = config.numQuestions || 60;
-                const numA = config.numAlternatives || 5;
-                const left = config.leftColumn || Math.ceil(numQ / 2);
-                const right = config.rightColumn || Math.floor(numQ / 2);
-                const school = config.schoolName || 'Simulado Trimestral';
-                const logo = config.logoUrl || '';
-                const opts = 'ABCDE'.substring(0, numA);
-                const titleText = showAnswers ? 'Simulado Trimestral' : school;
-
-                const today = new Date();
-                const day = String(today.getDate()).padStart(2, '0');
-                const month = String(today.getMonth() + 1).padStart(2, '0');
-                const year = today.getFullYear();
-                const dateStr = `${day}/${month}/${year}`;
-
-                let html = '<!DOCTYPE html><html><head>';
-                html += '<meta charset="UTF-8"><title>Gabarito</title>';
-                html += '<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">';
-                html += '<style>';
-                html += `
-                    *{margin:0;padding:0;box-sizing:border-box}
-                    body{font-family:'Roboto',sans-serif;background:#fff}
-                    .page{width:210mm;height:297mm;margin:0 auto;background:#fff;border:3px solid #FF6D00;padding:12mm 14mm;page-break-after:always}
-                    .header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;padding-bottom:8px;border-bottom:2px solid #FF6D00}
-                    .logo{height:35px;max-width:80px}
-                    .title h1{color:#FF6D00;font-size:18px;font-weight:700;margin-bottom:2px}
-                    .title p{color:#666;font-size:10px;font-weight:500}
-                    .badge{background:linear-gradient(135deg,#FF6D00,#E65100);color:#fff;padding:6px 14px;border-radius:4px;font-weight:700;font-size:11px}
-                    .info-box{background:#FFF8F4;padding:8px;border-radius:4px;margin-bottom:8px;display:flex;gap:10px;align-items:flex-end;border:1px solid #ddd}
-                    .field{flex:1}
-                    .field.small{flex:0 0 70px}
-                    .field label{display:block;font-size:8px;color:#666;text-transform:uppercase;margin-bottom:3px;font-weight:600}
-                    .field-line{height:18px;border-bottom:1.5px solid #333}
-                    .field-line.data{border:none;font-size:9px;font-weight:600;color:#333}
-                    .instrucoes{background:#FFF3E0;padding:8px 10px;border-radius:4px;margin-bottom:8px;border-left:3px solid #FF6D00}
-                    .instrucoes h3{color:#FF6D00;font-size:9px;font-weight:700;margin-bottom:5px;text-transform:uppercase}
-                    .instrucoes ol{margin-left:14px;font-size:8.5px;color:#333;line-height:1.4}
-                    .instrucoes li{margin-bottom:2px}
-                    table{width:100%;border-collapse:collapse;margin-bottom:8px}
-                    th{background:#FF6D00;color:#fff;padding:4px 3px;font-size:9px;font-weight:700;border:1px solid #E65100}
-                    td{border:1px solid #333;padding:0;text-align:center}
-                    .q-num{background:#FFF3E0;width:24px;font-weight:700;font-size:8.5px;color:#333}
-                    .alt-head{width:22px;font-size:9px}
-                    .sep{width:5px;background:#FF6D00;border:none}
-                    .bubble{width:18px;height:18px;border:1.5px solid #333;border-radius:3px;margin:1px auto;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:8.5px;background:#fff}
-                    .bubble.filled{background:#FF6D00;border-color:#E65100;color:#fff}
-                    tr:nth-child(even){background:#FFF8F4}
-                    .footer{text-align:center;font-size:8px;color:#888;padding-top:4px;border-top:1px solid #ddd;margin-top:6px}
-                    @media print{body{background:#fff}.page{border:2px solid #FF6D00;margin:0}}
-                    @page{size:A4;margin:0}
-                `;
-                html += '</style></head><body>';
-
-                const totalPerPage = left + right;
-                const totalPages = Math.ceil(numQ / totalPerPage);
-
-                for (let p = 0; p < totalPages; p++) {
-                    const startQ = p * totalPerPage + 1;
-                    const endQ = Math.min(startQ + totalPerPage - 1, numQ);
-
-                    html += '<div class="page">';
-                    html += '<div class="header">';
-                    if (logo) html += `<img src="${logo}" class="logo">`;
-                    html += `<div class="title"><h1>${titleText}</h1><p>Folha de Respostas</p></div>`;
-                    if (showAnswers) html += '<div class="badge">GABARITO</div>';
-                    html += '</div>';
-
-                    html += '<div class="info-box">';
-                    html += '<div class="field"><label>Nome</label><div class="field-line"></div></div>';
-                    html += '<div class="field small"><label>Turma</label><div class="field-line"></div></div>';
-                    html += `<div class="field"><label>Data</label><div class="field-line data">${dateStr}</div></div>`;
-                    html += '</div>';
-
-                    html += '<div class="instrucoes">';
-                    html += '<h3>Instruções</h3>';
-                    html += '<ol>';
-                    html += '<li>Assinale apenas uma resposta para cada questão</li>';
-                    html += '<li>Utilize apenas caneta azul ou preta</li>';
-                    html += '<li>Não rasure ou amasse esta folha de resposta</li>';
-                    html += '<li>Questões em branco ou com mais de uma alternativa assinalada serão desconsideradas</li>';
-                    html += '</ol>';
-                    html += '</div>';
-
-                    let rows = '';
-                    for (let r = 0; r < left; r++) {
-                        const q1 = startQ + r;
-                        const q2 = startQ + r + left;
-
-                        rows += '<tr>';
-
-                        if (q1 <= Math.min(startQ + left - 1, numQ)) {
-                            rows += `<td class="q-num">${q1}</td>`;
-                            for (let a = 0; a < numA; a++) {
-                                const letter = opts[a];
-                                const filled = answers[q1-1] === letter ? 'filled' : '';
-                                rows += `<td><div class="bubble ${filled}">${letter}</div></td>`;
-                            }
-                        } else {
-                            rows += '<td class="q-num"></td>';
-                            for (let a = 0; a < numA; a++) rows += '<td></td>';
-                        }
-
-                        rows += '<td class="sep"></td>';
-
-                        if (q2 <= numQ) {
-                            rows += `<td class="q-num">${q2}</td>`;
-                            for (let a = 0; a < numA; a++) {
-                                const letter = opts[a];
-                                const filled = answers[q2-1] === letter ? 'filled' : '';
-                                rows += `<td><div class="bubble ${filled}">${letter}</div></td>`;
-                            }
-                        } else {
-                            rows += '<td class="q-num"></td>';
-                            for (let a = 0; a < numA; a++) rows += '<td></td>';
-                        }
-
-                        rows += '</tr>';
+        function generatePreview() {
+            currentConfig.numQuestions = parseInt(document.getElementById('num-questions').value);
+            currentConfig.numAlternatives = parseInt(document.getElementById('num-alternatives').value);
+            currentConfig.columns = parseInt(document.getElementById('num-columns').value);
+            
+            const canvas = document.getElementById('preview-canvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Configura canvas A4
+            canvas.width = 595;
+            canvas.height = 842;
+            
+            // Fundo branco
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Cabeçalho
+            ctx.fillStyle = '#FF6D00';
+            ctx.fillRect(0, 0, canvas.width, 60);
+            
+            ctx.fillStyle = 'white';
+            ctx.font = 'bold 24px Roboto';
+            ctx.textAlign = 'center';
+            ctx.fillText('GABARITO - LeGab', canvas.width / 2, 40);
+            
+            // Área do gabarito
+            const padding = 40;
+            const availableWidth = canvas.width - (padding * 2);
+            const availableHeight = canvas.height - 100;
+            
+            const columnWidth = availableWidth / currentConfig.columns;
+            const questionsPerColumn = Math.ceil(currentConfig.numQuestions / currentConfig.columns);
+            const bubbleHeight = availableHeight / (questionsPerColumn * currentConfig.numAlternatives * 1.5);
+            const bubbleWidth = columnWidth / currentConfig.numAlternatives / 2;
+            
+            ctx.fillStyle = 'black';
+            ctx.font = '12px Roboto';
+            
+            // Desenha bolhas
+            for (let col = 0; col < currentConfig.columns; col++) {
+                const baseX = padding + (col * columnWidth) + (columnWidth * 0.2);
+                
+                for (let q = 0; q < questionsPerColumn; q++) {
+                    const questionNum = col * questionsPerColumn + q + 1;
+                    if (questionNum > currentConfig.numQuestions) break;
+                    
+                    const baseY = 80 + (q * currentConfig.numAlternatives * bubbleHeight * 1.5);
+                    
+                    // Número da questão
+                    ctx.textAlign = 'left';
+                    ctx.fillText(`${questionNum}.`, baseX - 15, baseY + 10);
+                    
+                    // Alternativas
+                    for (let alt = 0; alt < currentConfig.numAlternatives; alt++) {
+                        const x = baseX + (alt * bubbleWidth * 1.5);
+                        const y = baseY;
+                        
+                        // Desenha círculo
+                        ctx.beginPath();
+                        ctx.arc(x + bubbleWidth/2, y + bubbleHeight/2, bubbleWidth * 0.4, 0, Math.PI * 2);
+                        ctx.strokeStyle = 'black';
+                        ctx.lineWidth = 1.5;
+                        ctx.stroke();
+                        
+                        // Letra
+                        ctx.fillStyle = 'black';
+                        ctx.textAlign = 'center';
+                        ctx.fillText(String.fromCharCode(65 + alt), x + bubbleWidth/2, y + bubbleHeight/2 + 4);
                     }
-
-                    const headers = '<th class="q-num">Q</th>' + opts.split('').map(a=>`<th class="alt-head">${a}</th>`).join('') + '<th class="sep"></th><th class="q-num">Q</th>' + opts.split('').map(a=>`<th class="alt-head">${a}</th>`).join('');
-
-                    html += `<table><thead><tr>${headers}</tr></thead><tbody>${rows}</tbody></table>`;
-                    html += `<div class="footer">Q${startQ}-${endQ}/${numQ}</div>`;
-                    html += '</div>';
                 }
-
-                html += '</body></html>';
-                w.document.write(html);
-                w.document.close();
             }
+            
+            // Borda
+            ctx.strokeStyle = '#FF6D00';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(0, 0, canvas.width, canvas.height);
+            
+            generateAnswerGrid();
+        }
 
-            function showToast(msg, isError) {
-                const t = document.getElementById('toast');
-                t.textContent = msg;
-                t.className = `md-toast show ${isError ? 'error' : 'success'}`;
-                setTimeout(() => t.classList.remove('show'), 3000);
+        function generateAnswerGrid() {
+            const grid = document.getElementById('answer-grid');
+            grid.innerHTML = '';
+            
+            for (let i = 0; i < currentConfig.numQuestions; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'answer-cell';
+                cell.textContent = currentConfig.answers[i] || '-';
+                cell.onclick = () => selectAnswer(i);
+                grid.appendChild(cell);
             }
-        });
+        }
+
+        function selectAnswer(index) {
+            const letters = 'ABCDE'.substr(0, currentConfig.numAlternatives);
+            const current = currentConfig.answers[index];
+            let nextIndex = letters.indexOf(current) + 1;
+            
+            if (nextIndex >= currentConfig.numAlternatives || nextIndex < 0) {
+                nextIndex = 0;
+            }
+            
+            currentConfig.answers[index] = letters[nextIndex];
+            currentConfig.answers[index] = letters[nextIndex];
+            
+            // Atualiza visual
+            const cells = document.getElementById('answer-grid').children;
+            cells[index].textContent = letters[nextIndex];
+            cells[index].classList.add('selected');
+            
+            // Atualiza canvas
+            setTimeout(generatePreview, 100);
+        }
+
+        function printSheet() {
+            saveConfig();
+            setTimeout(() => {
+                window.print();
+            }, 500);
+        }
+
+        function downloadPDF() {
+            const canvas = document.getElementById('preview-canvas');
+            const link = document.createElement('a');
+            link.download = 'gabarito-legab.pdf';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+            alert('Para gerar PDF, use a opção de impressão e selecione "Salvar como PDF"');
+        }
+
+        function saveConfig() {
+            const config = {
+                numQuestions: currentConfig.numQuestions,
+                numAlternatives: currentConfig.numAlternatives,
+                correctAnswers: Object.values(currentConfig.answers).join('')
+            };
+            
+            localStorage.setItem('legab_config', JSON.stringify(config));
+            
+            alert('Configurações salvas! Agora vá para o Scanner para usar.');
+        }
+
+        // Inicializa
+        init();
     </script>
 </body>
 </html>
