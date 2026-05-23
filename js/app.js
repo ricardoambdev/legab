@@ -204,19 +204,23 @@ function stopScanAnimation() {
  * Captura e processa imagem
  */
 async function captureAndProcess() {
-    if (isProcessing || !camera || !cvReady) return;
+    if (!cvReady) {
+        log('OpenCV não carregado ainda...');
+        alert('Aguarde o OpenCV carregar!');
+        return;
+    }
+    
+    if (isProcessing || !camera) return;
     
     isProcessing = true;
     showLoading(true, '📸 Capturando...');
     
     try {
-        // Pequeno delay para garantir estabilização
         await sleep(100);
         
         log('Capturando imagem...');
         showLoading(true, '📸 Capturando...');
         
-        // Captura imagem da câmera
         const srcMat = camera.captureToMat();
         
         if (srcMat.empty()) {
@@ -226,15 +230,12 @@ async function captureAndProcess() {
         log(`Imagem: ${srcMat.cols}x${srcMat.rows}`);
         showLoading(true, '🔍 Processando...');
         
-        // 1. Pré-processamento
-        log('Pré-processando...');
         const processed = PreprocessingModule.processForOMR(srcMat, {
             blurSize: 5,
             blockSize: 11,
             constant: 2
         });
         
-        // 2. Detecta documento
         log('Detectando documento...');
         const correction = PerspectiveModule.autoCorrect(srcMat, {
             minArea: 5000,
@@ -251,7 +252,6 @@ async function captureAndProcess() {
             log('Usando imagem original');
         }
         
-        // 3. Processa OMR
         log('Lendo gabarito...');
         showLoading(true, '📖 Lendo respostas...');
         
@@ -260,7 +260,6 @@ async function captureAndProcess() {
         
         log(`Questões: ${answers.length}`);
         
-        // 4. Carrega gabarito
         const config = loadConfig();
         const correctAnswers = config.correctAnswers ? 
             config.correctAnswers.toUpperCase().split('') : null;
@@ -270,19 +269,16 @@ async function captureAndProcess() {
             showLoading(false);
             alert('Configure o gabarito em Config primeiro!');
         } else {
-            // 5. Compara respostas
             const comparison = omr.compareWithKey(answers, correctAnswers);
             
             log(`Acertos: ${comparison.correct}/${comparison.total} (${comparison.percentage}%)`);
             
-            // 6. Mostra resultados
             ui.showResults(results, correctAnswers.join(''));
             
             ui.setStatus('✅ Concluído!', 'success');
             showLoading(false);
         }
         
-        // Limpeza de memória
         cleanupMats([srcMat, processed.gray, processed.blurred, 
                     processed.threshold, processed.edges, correction.corrected]);
         
