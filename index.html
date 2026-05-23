@@ -34,11 +34,7 @@
         <div class="scanner-wrapper">
             <div class="camera-container">
                 <video id="video" autoplay playsinline muted></video>
-                
-                <!-- Overlay com gradientes -->
                 <div class="camera-overlay"></div>
-                
-                <!-- Marco de digitalização -->
                 <div class="scan-frame">
                     <div class="corner top-left"></div>
                     <div class="corner top-right"></div>
@@ -46,112 +42,27 @@
                     <div class="corner bottom-right"></div>
                     <div class="scan-line"></div>
                 </div>
-                
-                <!-- Status da detecção -->
-                <div class="detection-status" id="detection-status">
-                    <span class="status-icon material-icons">searching</span>
-                    <span class="status-text">Procurando gabarito...</span>
-                </div>
-                
-                <!-- Botão de processar sobreposto -->
-                <div class="process-button-container hidden" id="process-button-container">
-                    <button id="btn-process" class="process-btn">
-                        <span class="material-icons">check</span>
-                        Processar Gabarito
-                    </button>
-                </div>
-                
-                <!-- Controles -->
                 <div class="camera-controls">
-                    <button id="btn-stop" class="control-btn" title="Parar câmera">
+                    <button id="btn-stop" class="control-btn">
                         <span class="material-icons">stop</span>
                     </button>
-                    <button id="btn-restart" class="control-btn hidden" title="Reiniciar">
+                    <button id="btn-restart" class="control-btn hidden">
                         <span class="material-icons">refresh</span>
                     </button>
                 </div>
             </div>
         </div>
 
-        <!-- Loading -->
-        <div id="loading-section" class="md-card hidden">
-            <div class="loading">
-                <div class="md-spinner"></div>
-                <p id="loading-status">Processando...</p>
-            </div>
-        </div>
-
-        <!-- Entrada manual -->
-        <div id="manual-section" class="md-card">
-            <h3>Entrada Manual</h3>
-            <div class="md-field">
-                <label>Digite as respostas</label>
-                <input type="text" id="manual-answers" class="md-input" placeholder="Ex: ABCDEF..." maxlength="60">
-            </div>
-            <button id="btn-check" class="md-btn md-btn-primary md-btn-block">
-                <span class="material-icons">check</span>
-                Verificar Respostas
+        <div class="md-card">
+            <h3>Status</h3>
+            <p id="camera-status">Iniciando câmera...</p>
+            <button id="btn-test" class="md-btn md-btn-primary md-btn-block" style="margin-top: 10px;">
+                <span class="material-icons">test</span>
+                Testar Câmera
             </button>
         </div>
     </main>
 
-    <!-- Modal de Resultado -->
-    <div id="result-modal" class="modal-overlay hidden">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>Resultado</h2>
-                <button class="modal-close" id="modal-close">
-                    <span class="material-icons">close</span>
-                </button>
-            </div>
-            
-            <div class="modal-body">
-                <div class="student-info">
-                    <div class="md-field">
-                        <label>Nome do Aluno</label>
-                        <input type="text" id="student-name" class="md-input" placeholder="Digite o nome do aluno">
-                    </div>
-                    <div class="md-field">
-                        <label>Data</label>
-                        <input type="text" id="result-date" class="md-input" readonly>
-                    </div>
-                </div>
-
-                <div class="result-stats">
-                    <div class="stat correct">
-                        <span class="stat-value" id="correct-count">0</span>
-                        <span class="stat-label">Acertos</span>
-                    </div>
-                    <div class="stat wrong">
-                        <span class="stat-value" id="wrong-count">0</span>
-                        <span class="stat-label">Erros</span>
-                    </div>
-                    <div class="stat blank">
-                        <span class="stat-value" id="blank-count">0</span>
-                        <span class="stat-label">Branco</span>
-                    </div>
-                </div>
-                
-                <div class="result-score">
-                    <span class="score-value" id="score-percent">0%</span>
-                </div>
-                
-                <div id="pass-fail" class="pass-fail"></div>
-            </div>
-            
-            <div class="modal-footer">
-                <button id="btn-save-result" class="md-btn md-btn-primary md-btn-block">
-                    <span class="material-icons">save</span>
-                    Salvar Resultado
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <div id="toast" class="md-toast"></div>
-
-    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-    <script src="js/config.js"></script>
     <script src="js/scanner-ui.js"></script>
 </body>
 </html>
