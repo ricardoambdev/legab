@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LeGab - Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="header">
+    <div class="header-brand">
+      <span class="material-icons">assessment</span>
+      <span>LeGab</span>
+    </div>
+    <nav class="header-nav">
+      <a href="index.html"><span class="material-icons">qr_code_scanner</span></a>
+      <a href="generate.html"><span class="material-icons">print</span></a>
+      <a href="settings.html"><span class="material-icons">settings</span></a>
+      <a href="dashboard.html" class="active"><span class="material-icons">assessment</span></a>
+    </nav>
+  </header>
+
+  <main class="container" id="dashboard-content">
+    <div class="text-center mt-16">
+      <div class="spinner" style="margin:0 auto"></div>
+      <p style="color:#999;margin-top:12px">Carregando dados...</p>
+    </div>
+  </main>
+
+  <script src="js/firebase.js"></script>
+  <script>
+    async function loadDashboard() {
+      await Firebase.init();
+      const results = Firebase.getResults();
+      const container = document.getElementById('dashboard-content');
+
+      if (results.length === 0) {
+        container.innerHTML = `
+          <div class="card text-center">
+            <span class="material-icons" style="font-size:64px;color:#ddd">assessment</span>
+            <h3 style="margin-top:16px;color:#666">Nenhum resultado ainda</h3>
+            <p style="color:#999;margin-top:8px">Os resultados dos scans aparecerão aqui.</p>
+            <a href="index.html" class="btn btn-primary mt-16">
+              <span class="material-icons">qr_code_scanner</span>Fazer Scan
+            </a>
+          </div>
+        `;
+        return;
+      }
+
+      const avg = Math.round(results.reduce((s, r) => s + r.percentage, 0) / results.length);
+      const best = Math.max(...results.map(r => r.percentage));
+      const worst = Math.min(...results.map(r => r.percentage));
+      const total = results.length;
+
+      container.innerHTML = `
+        <div class="card">
+          <div class="card-title">
+            <span class="material-icons">insights</span>
+            Estatísticas
+          </div>
+          <div class="result-grid">
+            <div class="result-stat score">
+              <span class="value">${avg}%</span>
+              <span class="label">Média</span>
+            </div>
+            <div class="result-stat correct">
+              <span class="value">${best}%</span>
+              <span class="label">Melhor</span>
+            </div>
+            <div class="result-stat wrong">
+              <span class="value">${worst}%</span>
+              <span class="label">Pior</span>
+            </div>
+            <div class="result-stat blank">
+              <span class="value">${total}</span>
+              <span class="label">Total</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">
+            <span class="material-icons">history</span>
+            Histórico (${total} resultados)
+            <button class="btn btn-outline" style="margin-left:auto;font-size:12px;padding:6px 12px" onclick="exportCSV()">
+              <span class="material-icons">download</span>CSV
+            </button>
+          </div>
+          ${renderTable(results)}
+        </div>
+      `;
+    }
+
+    function renderTable(results) {
+      if (results.length === 0) return '<p style="color:#999">Nenhum resultado.</p>';
+
+      const rows = results.slice(0, 30).map((r, i) => {
+        const date = r.timestamp ? new Date(r.timestamp).toLocaleDateString('pt-BR') : '-';
+        return `
+          <tr style="border-bottom:1px solid #eee">
+            <td style="padding:10px 8px;font-size:13px">${r.name || 'Anônimo'}</td>
+            <td style="padding:10px 8px;text-align:center;font-weight:600;color:#2E7D32">${r.correct}</td>
+            <td style="padding:10px 8px;text-align:center;color:#C62828">${r.wrong}</td>
+            <td style="padding:10px 8px;text-align:center;color:#999">${r.blank}</td>
+            <td style="padding:10px 8px;text-align:center;font-weight:700">${r.percentage}%</td>
+            <td style="padding:10px 8px;font-size:11px;color:#999">${date}</td>
+          </tr>
+        `;
+      }).join('');
+
+      return `
+        <table style="width:100%;border-collapse:collapse">
+          <thead>
+            <tr style="background:#f5f5f5;font-size:12px;text-transform:uppercase;color:#666">
+              <th style="padding:10px 8px;text-align:left">Aluno</th>
+              <th style="padding:10px 8px">Acertos</th>
+              <th style="padding:10px 8px">Erros</th>
+              <th style="padding:10px 8px">Branco</th>
+              <th style="padding:10px 8px">Nota</th>
+              <th style="padding:10px 8px">Data</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      `;
+    }
+
+    function exportCSV() {
+      const results = Firebase.getResults();
+      let csv = 'Aluno,Acertos,Erros,Branco,Nota,Data\n';
+      results.forEach(r => {
+        const date = r.timestamp ? new Date(r.timestamp).toLocaleDateString('pt-BR') : '-';
+        csv += `"${r.name || 'Anônimo'}",${r.correct},${r.wrong},${r.blank},${r.percentage}%,${date}\n`;
+      });
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'resultados-legab.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    loadDashboard();
+  </script>
+</body>
+</html>

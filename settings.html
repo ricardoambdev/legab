@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LeGab - Configurações</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="header">
+    <div class="header-brand">
+      <span class="material-icons">settings</span>
+      <span>LeGab</span>
+    </div>
+    <nav class="header-nav">
+      <a href="index.html"><span class="material-icons">qr_code_scanner</span></a>
+      <a href="generate.html"><span class="material-icons">print</span></a>
+      <a href="settings.html" class="active"><span class="material-icons">settings</span></a>
+      <a href="dashboard.html"><span class="material-icons">assessment</span></a>
+    </nav>
+  </header>
+
+  <main class="container">
+    <div class="card">
+      <div class="card-title">
+        <span class="material-icons">tune</span>
+        Configurações do Sistema
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Nome da Escola</label>
+          <input type="text" id="name" class="form-input" placeholder="Nome da instituição">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Título Padrão</label>
+          <input type="text" id="title" class="form-input" value="Simulado Trimestral">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Número de Questões</label>
+          <input type="number" id="questions" class="form-input" value="60" min="1" max="120">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Alternativas</label>
+          <select id="alternatives" class="form-select">
+            <option value="5">5 (A-E)</option>
+            <option value="4">4 (A-D)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Sensibilidade (threshold)</label>
+          <select id="threshold" class="form-select">
+            <option value="0.3">Baixa (30%)</option>
+            <option value="0.35">Média-baixa (35%)</option>
+            <option value="0.4" selected>Média (40%)</option>
+            <option value="0.5">Alta (50%)</option>
+            <option value="0.6">Muito alta (60%)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Gabarito Oficial</label>
+        <textarea id="key" class="form-input" rows="3" placeholder="Cole o gabarito: ABCDEABCDE..." style="font-family:monospace;letter-spacing:4px;resize:vertical"></textarea>
+        <small style="color:#999">Uma letra por questão. Ex: ABCDEABCDE... (60 caracteres)</small>
+      </div>
+
+      <div class="btn-group mt-16">
+        <button class="btn btn-primary" onclick="save()">
+          <span class="material-icons">cloud_upload</span>
+          Salvar Configurações
+        </button>
+        <button class="btn btn-outline" onclick="resetConfig()">
+          <span class="material-icons">restart_alt</span>
+          Restaurar Padrão
+        </button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <span class="material-icons">info</span>
+        Sobre a Sensibilidade
+      </div>
+      <p style="color:#666;font-size:14px;line-height:1.6">
+        <strong>Threshold</strong> define quão escura precisa ser a marcação para ser detectada.<br><br>
+        <strong>30-35%:</strong> Detecta lápis comum e marcações leves<br>
+        <strong>40%:</strong> Recomendado - funciona com lápis 2B e caneta<br>
+        <strong>50-60%:</strong> Exige marcações escuras (caneta preta)
+      </p>
+    </div>
+  </main>
+
+  <script src="js/firebase.js"></script>
+  <script>
+    async function loadSettings() {
+      await Firebase.init();
+      const config = await Firebase.loadConfig();
+
+      document.getElementById('name').value = config.name || '';
+      document.getElementById('title').value = config.title || 'Simulado Trimestral';
+      document.getElementById('questions').value = config.questions || 60;
+      document.getElementById('alternatives').value = config.alternatives || 5;
+      document.getElementById('threshold').value = config.threshold || 0.4;
+
+      const key = config.answers ? Object.values(config.answers).join('') : '';
+      document.getElementById('key').value = key;
+    }
+
+    async function save() {
+      const key = document.getElementById('key').value.toUpperCase();
+      const questions = parseInt(document.getElementById('questions').value);
+
+      const answers = {};
+      for (let i = 0; i < Math.min(key.length, questions); i++) {
+        if ('ABCDE'.includes(key[i])) {
+          answers[i + 1] = key[i];
+        }
+      }
+
+      const config = {
+        name: document.getElementById('name').value,
+        title: document.getElementById('title').value,
+        questions,
+        alternatives: parseInt(document.getElementById('alternatives').value),
+        threshold: parseFloat(document.getElementById('threshold').value),
+        answers
+      };
+
+      await Firebase.saveConfig(config);
+
+      document.getElementById('key').value = Object.values(answers).join('');
+      alert('✅ Configurações salvas!');
+    }
+
+    function resetConfig() {
+      document.getElementById('name').value = '';
+      document.getElementById('title').value = 'Simulado Trimestral';
+      document.getElementById('questions').value = 60;
+      document.getElementById('alternatives').value = 5;
+      document.getElementById('threshold').value = 0.4;
+      document.getElementById('key').value = '';
+    }
+
+    loadSettings();
+  </script>
+</body>
+</html>
