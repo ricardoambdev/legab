@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const loadingSection = document.getElementById('loading-section');
     const resultSection = document.getElementById('result-section');
     const manualInput = document.getElementById('manual-answers');
-    const scanStatus = document.getElementById('scan-status');
+    const detectionStatus = document.getElementById('detection-status');
 
     let detectionCount = 0;
     const detectionThreshold = 3;
@@ -32,12 +32,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     async function startCamera() {
         try {
-            updateScanStatus('searching', 'Iniciando câmera...');
+            updateStatus('searching', 'Iniciando câmera...');
             
-            // Tenta pegar a câmera traseira
             stream = await navigator.mediaDevices.getUserMedia({ 
                 video: { 
-                    facingMode: { exact: 'environment' } || 'environment',
+                    facingMode: 'environment',
                     width: { ideal: 1920 },
                     height: { ideal: 1080 }
                 },
@@ -47,14 +46,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             videoElement = document.getElementById('video');
             videoElement.srcObject = stream;
             
-            // Espera o vídeo carregar
             await new Promise((resolve) => {
                 videoElement.onloadedmetadata = () => {
                     videoElement.play().then(resolve).catch(resolve);
                 };
             });
             
-            // Pequeno delay para garantir que o vídeo está renderizando
             await new Promise(resolve => setTimeout(resolve, 500));
             
             console.log('Câmera iniciada:', videoElement.videoWidth, 'x', videoElement.videoHeight);
@@ -63,9 +60,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             btnStop.classList.remove('hidden');
             btnRestart.classList.add('hidden');
             
-            // Start detection loop
             detectionCount = 0;
-            updateScanStatus('searching', 'Procurando gabarito...');
+            updateStatus('searching', 'Procurando gabarito...');
             
             detectionInterval = setInterval(async () => {
                 if (isProcessing || !videoElement || videoElement.readyState !== 4) return;
@@ -74,7 +70,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 
                 if (detected) {
                     detectionCount++;
-                    updateScanStatus('detecting', `Gabarito detectado! (${detectionCount}/${detectionThreshold})`);
+                    updateStatus('detecting', `Gabarito detectado! (${detectionCount}/${detectionThreshold})`);
                     
                     if (detectionCount >= detectionThreshold) {
                         capturedImage = captureFrame();
@@ -83,14 +79,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                     }
                 } else {
                     detectionCount = 0;
-                    updateScanStatus('searching', 'Procurando gabarito...');
+                    updateStatus('searching', 'Procurando gabarito...');
                 }
             }, 1000);
             
         } catch (error) {
             console.error('Erro na câmera:', error);
-            showToast('Erro: ' + error.message + '. Tente usar HTTPS ou localhost.', true);
-            updateScanStatus('error', 'Erro na câmera');
+            showToast('Erro: ' + error.message + '. Use HTTPS ou localhost.', true);
+            updateStatus('error', 'Erro na câmera');
         }
     }
 
@@ -105,7 +101,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             canvas.height = videoElement.videoHeight;
             ctx.drawImage(videoElement, 0, 0);
             
-            // Pega uma amostra do centro da imagem (onde está o gabarito)
             const centerX = Math.floor(canvas.width / 2);
             const centerY = Math.floor(canvas.height / 2);
             const sampleWidth = Math.floor(canvas.width / 4);
@@ -122,8 +117,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             let brightPixels = 0;
             let darkPixels = 0;
             
-            // Conta pixels claros e escuros
-            for (let i = 0; i < data.length; i += 16) { // Amostra a cada 4 pixels
+            for (let i = 0; i < data.length; i += 16) {
                 const brightness = (data[i] + data[i + 1] + data[i + 2]) / 3;
                 if (brightness > 200) brightPixels++;
                 else if (brightness < 100) darkPixels++;
@@ -132,11 +126,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             const total = brightPixels + darkPixels;
             if (total === 0) return false;
             
-            // Gabarito tem mistura de branco (papel) e preto (texto/bolhas)
             const hasContrast = brightPixels > total * 0.3 && darkPixels > total * 0.05;
             const hasText = darkPixels > total * 0.05;
-            
-            console.log('Detecção:', { brightPixels, darkPixels, total, hasContrast, hasText });
             
             return hasContrast && hasText;
         } catch (e) {
@@ -145,9 +136,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    function updateScanStatus(status, text) {
-        const icon = scanStatus.querySelector('.status-icon');
-        const textEl = scanStatus.querySelector('.status-text');
+    function updateStatus(status, text) {
+        if (!detectionStatus) return;
+        
+        const icon = detectionStatus.querySelector('.status-icon');
+        const textEl = detectionStatus.querySelector('.status-text');
+        
+        if (!icon || !textEl) return;
         
         if (status === 'searching') {
             icon.textContent = 'searching';
@@ -187,14 +182,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         const ctx = canvas.getContext('2d');
         ctx.drawImage(videoElement, 0, 0);
         
-        // Debug: mostra a imagem capturada
         const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
         console.log('Imagem capturada:', canvas.width, 'x', canvas.height, dataUrl.length, 'bytes');
         
         return dataUrl;
     }
 
-    // Process button
     btnProcess.addEventListener('click', async () => {
         if (!capturedImage || isProcessing) return;
         
@@ -218,13 +211,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    // Stop button
     btnStop.addEventListener('click', () => {
         stopCamera();
         processSection.classList.add('hidden');
     });
 
-    // Restart button
     btnRestart.addEventListener('click', () => {
         capturedImage = null;
         processSection.classList.add('hidden');
@@ -232,7 +223,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         startCamera();
     });
 
-    // Check manual
     btnCheck.addEventListener('click', () => {
         const answers = manualInput.value.trim().toUpperCase();
         if (!answers) {
@@ -267,15 +257,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function updateLoadingStatus(text) {
-        document.getElementById('loading-status').textContent = text;
+        const el = document.getElementById('loading-status');
+        if (el) el.textContent = text;
     }
 
     async function processImage(imageSrc, cfg) {
-        console.log('Processando imagem:', imageSrc.length, 'bytes');
         const worker = await Tesseract.createWorker('por');
         const { data: { text } } = await worker.recognize(imageSrc);
         await worker.terminate();
-        console.log('Texto OCR:', text.substring(0, 200));
         return parseAnswers(text, cfg);
     }
 
@@ -285,8 +274,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         const options = 'ABCDE'.substring(0, numA);
         const answers = new Array(numQ).fill('');
         const lines = text.split('\n');
-        
-        console.log('Linhas detectadas:', lines.length);
         
         for (const line of lines) {
             const clean = line.toUpperCase().replace(/[^A-E0-9\s]/g, ' ');
@@ -301,7 +288,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                             const candidate = parts[j].replace(/[^\w]/g, '');
                             if (options.includes(candidate) && candidate.length === 1) {
                                 answers[qNum - 1] = candidate;
-                                console.log(`Questão ${qNum}: ${candidate}`);
                                 break;
                             }
                         }
@@ -323,9 +309,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 });
             }
         }
-        
-        const detected = answers.filter(a => a !== '').length;
-        console.log(`Detectadas ${detected}/${numQ} respostas`);
         
         return answers.join('');
     }
@@ -394,6 +377,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function showToast(msg, isError) {
         const toast = document.getElementById('toast');
+        if (!toast) return;
         toast.textContent = msg;
         toast.className = `md-toast show ${isError ? 'error' : 'success'}`;
         setTimeout(() => toast.classList.remove('show'), 4000);
