@@ -30,24 +30,42 @@
         </header>
 
         <main class="md-main">
-            <div class="md-card">
-                <h2>Corrigir Gabarito</h2>
-                <p class="md-hint">Escolha como enviar o gabarito</p>
+            <div class="md-card scanner-card">
+                <h2>Escanear Gabarito</h2>
+                <p class="md-hint">Aponte a câmera para o gabarito</p>
 
-                <div class="capture-options">
-                    <button id="btn-upload" class="capture-btn">
-                        <span class="material-icons">upload</span>
-                        <strong>Enviar Foto</strong>
-                        <small>Da galeria ou câmera</small>
-                    </button>
-                    <button id="btn-camera" class="capture-btn">
+                <div class="camera-container">
+                    <video id="video" autoplay playsinline muted></video>
+                    <div class="scan-overlay">
+                        <div class="scan-frame">
+                            <div class="corner top-left"></div>
+                            <div class="corner top-right"></div>
+                            <div class="corner bottom-left"></div>
+                            <div class="corner bottom-right"></div>
+                        </div>
+                        <p class="scan-hint">Encaixe o gabarito aqui</p>
+                    </div>
+                    <div class="scan-line"></div>
+                </div>
+
+                <div class="capture-controls">
+                    <button id="btn-capture" class="md-btn md-btn-primary md-btn-large">
                         <span class="material-icons">photo_camera</span>
-                        <strong>Tirar Foto</strong>
-                        <small>Usar a câmera</small>
+                        Capturar
+                    </button>
+                    <button id="btn-stop" class="md-btn md-btn-outline hidden">
+                        <span class="material-icons">stop</span>
+                        Parar
                     </button>
                 </div>
 
-                <input type="file" id="file-input" accept="image/*" capture="environment" hidden>
+                <div class="auto-detect">
+                    <label class="switch">
+                        <input type="checkbox" id="auto-detect" checked>
+                        <span class="slider"></span>
+                    </label>
+                    <span>Detecção automática</span>
+                </div>
             </div>
 
             <div id="preview-section" class="md-card hidden">
@@ -75,8 +93,8 @@
             <div id="manual-section" class="md-card">
                 <h3>Ou digite as respostas</h3>
                 <div class="md-field">
-                    <label>Respostas (ex: ABCDED)</label>
-                    <input type="text" id="manual-answers" class="md-input" placeholder="Digite as respostas..." maxlength="65">
+                    <label>Respostas</label>
+                    <input type="text" id="manual-answers" class="md-input" placeholder="Ex: ABCDEF" maxlength="20">
                 </div>
                 <button id="btn-check" class="md-btn md-btn-primary md-btn-block">
                     <span class="material-icons">check</span>

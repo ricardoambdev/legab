@@ -1,11 +1,10 @@
 let config = null;
-let currentImage = null;
+let stream = null;
+let isAutoDetect = true;
+let lastCaptureTime = 0;
 
 document.addEventListener('DOMContentLoaded', async () => {
-    const configManager = new ConfigManager();
-    
-    // Carregar configurações
-    config = await configManager.getConfig();
+    config = await loadConfig();
     
     const numQuestions = config?.numQuestions || 6;
     const numAlternatives = config?.numAlternatives || 5;
@@ -13,71 +12,80 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('config-questions').textContent = numQuestions;
     document.getElementById('config-alternatives').textContent = numAlternatives;
 
-    const btnUpload = document.getElementById('btn-upload');
-    const btnCamera = document.getElementById('btn-camera');
+    const video = document.getElementById('video');
+    const btnCapture = document.getElementById('btn-capture');
+    const btnStop = document.getElementById('btn-stop');
     const btnRetry = document.getElementById('btn-retry');
     const btnProcess = document.getElementById('btn-process');
     const btnCheck = document.getElementById('btn-check');
-    const fileInput = document.getElementById('file-input');
+    const autoDetectToggle = document.getElementById('auto-detect');
     const previewSection = document.getElementById('preview-section');
     const imagePreview = document.getElementById('image-preview');
     const loadingSection = document.getElementById('loading-section');
     const resultSection = document.getElementById('result-section');
     const manualInput = document.getElementById('manual-answers');
 
-    // Upload button
-    btnUpload.addEventListener('click', () => {
-        fileInput.click();
+    let currentImage = null;
+    let captureInterval = null;
+
+    // Auto detect toggle
+    autoDetectToggle.addEventListener('change', (e) => {
+        isAutoDetect = e.target.checked;
     });
 
-    // Camera button
-    btnCamera.addEventListener('click', async () => {
+    // Start camera
+    startCamera();
+
+    async function startCamera() {
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ 
-                video: { facingMode: 'environment' } 
+            stream = await navigator.mediaDevices.getUserMedia({ 
+                video: { 
+                    facingMode: 'environment',
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 }
+                } 
             });
             
-            const track = stream.getTracks()[0];
-            const imageCapture = new ImageCapture(track);
-            const blob = await imageCapture.takePhoto();
+            video.srcObject = stream;
+            btnCapture.classList.add('hidden');
+            btnStop.classList.remove('hidden');
             
-            track.stop();
-            
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                showPreview(e.target.result);
-            };
-            reader.readAsDataURL(blob);
+            // Auto capture loop
+            if (isAutoDetect) {
+                captureInterval = setInterval(async () => {
+                    const now = Date.now();
+                    if (now - lastCaptureTime > 2000) {
+                        await captureAndProcess();
+                    }
+                }, 500);
+            }
         } catch (error) {
-            showToast('Não foi possível usar a câmera', true);
-            fileInput.click();
+            showToast('Erro na câmera: ' + error.message, true);
         }
+    }
+
+    // Capture button
+    btnCapture.addEventListener('click', async () => {
+        await captureAndProcess();
     });
 
-    // File input change
-    fileInput.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                showPreview(event.target.result);
-            };
-            reader.readAsDataURL(file);
-        }
+    // Stop button
+    btnStop.addEventListener('click', () => {
+        stopCamera();
     });
 
     // Retry
     btnRetry.addEventListener('click', () => {
         hidePreview();
-        fileInput.value = '';
+        startCamera();
     });
 
-    // Process image
+    // Process button
     btnProcess.addEventListener('click', async () => {
         if (!currentImage) return;
         
         showLoading(true);
-        updateLoadingStatus('Processando imagem...');
+        updateLoadingStatus('Processando...');
         
         try {
             const answers = await processImage(currentImage, config);
@@ -85,7 +93,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             showResult(result);
         } catch (error) {
             console.error(error);
-            showToast('Erro ao processar: ' + error.message, true);
+            showToast('Erro: ' + error.message, true);
         } finally {
             showLoading(false);
         }
@@ -108,8 +116,49 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
+    async function captureAndProcess() {
+        if (!stream) return;
+        
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0);
+        
+        currentImage = canvas.toDataURL('image/jpeg', 0.8);
+        
+        showPreview(currentImage);
+        stopCamera();
+        
+        // Auto process
+        showLoading(true);
+        updateLoadingStatus('Analisando...');
+        
+        try {
+            const answers = await processImage(currentImage, config);
+            const result = checkAnswers(answers, config);
+            showResult(result);
+        } catch (error) {
+            console.error(error);
+            showToast('Erro: ' + error.message, true);
+            showLoading(false);
+        }
+    }
+
+    function stopCamera() {
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+            stream = null;
+        }
+        if (captureInterval) {
+            clearInterval(captureInterval);
+            captureInterval = null;
+        }
+        btnCapture.classList.remove('hidden');
+        btnStop.classList.add('hidden');
+    }
+
     function showPreview(imageSrc) {
-        currentImage = imageSrc;
         imagePreview.src = imageSrc;
         previewSection.classList.remove('hidden');
         resultSection.classList.add('hidden');
@@ -132,16 +181,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     async function processImage(imageSrc, cfg) {
-        updateLoadingStatus('Iniciando OCR...');
-        
-        // Create worker
         const worker = await Tesseract.createWorker('por');
-        
-        updateLoadingStatus('Reconhecendo...');
         const { data: { text } } = await worker.recognize(imageSrc);
         await worker.terminate();
-        
-        updateLoadingStatus('Analisando...');
         return parseAnswers(text, cfg);
     }
 
@@ -149,7 +191,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         const numQ = cfg.numQuestions || 6;
         const numA = cfg.numAlternatives || 5;
         const options = 'ABCDE'.substring(0, numA);
-        
         const answers = new Array(numQ).fill('');
         const lines = text.split('\n');
         
@@ -243,6 +284,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         resultSection.classList.remove('hidden');
         resultSection.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    async function loadConfig() {
+        try {
+            const stored = localStorage.getItem('legab_config');
+            if (stored) return JSON.parse(stored);
+        } catch(e) {}
+        return { numQuestions: 6, numAlternatives: 5 };
     }
 
     function showToast(msg, isError) {
